@@ -107,9 +107,7 @@ const SignUpScreen = () => {
   };
 
   const handleSignIn = () => {
-    navigation.navigate('SignIn', {
-      transition: 'slide_from_right'
-    });
+    navigation.navigate('SignIn');
   };
 
   const handleSignUp = () => {
@@ -117,8 +115,16 @@ const SignUpScreen = () => {
     const isPhoneValid = validatePhone(phoneNumber);
 
     if (isNameValid && isPhoneValid) {
-      // Navigate to OTP screen or handle signup
-      navigation.navigate('OTPVerification', { phoneNumber: `+92${phoneNumber}` });
+      navigation.navigate('OTPVerification', { 
+        phoneNumber: `+92${phoneNumber}` 
+      });
+    } else {
+      if (!isNameValid) {
+        setNameError('Please enter a valid name');
+      }
+      if (!isPhoneValid) {
+        setPhoneError('Please enter a valid phone number');
+      }
     }
   };
 

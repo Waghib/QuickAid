@@ -83,9 +83,7 @@ const SignInScreen = () => {
   };
 
   const handleSignUp = () => {
-    navigation.navigate('SignUp', {
-      transition: 'slide_from_right'
-    });
+    navigation.navigate('SignUp');
   };
 
   const handleSignIn = () => {
@@ -94,7 +92,7 @@ const SignInScreen = () => {
     if (isPhoneValid) {
       navigation.navigate('OTPVerification', { phoneNumber: `+92${phoneNumber}` });
     } else {
-      Alert.alert('Validation Error', 'Please check your input fields');
+      setPhoneError('Please enter a valid phone number');
     }
   };
 
