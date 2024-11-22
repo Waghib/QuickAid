@@ -123,9 +123,7 @@ const SignUpScreen = () => {
   };
 
   const handleSignIn = () => {
-    navigation.navigate('SignIn', {
-      transition: 'slide_from_right'
-    });
+    navigation.navigate('SignIn');
   };
 
   const handleSignUp = () => {
@@ -148,6 +146,7 @@ const SignUpScreen = () => {
   const isNameComplete = (name) => {
     return name.trim().length >= 3;
   };
+
 
   return (
     <View style={styles.container}>
