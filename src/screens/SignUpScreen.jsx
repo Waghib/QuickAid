@@ -78,14 +78,14 @@ const SignUpScreen = () => {
 
   // Phone validation
   const validatePhone = (text) => {
-    const phoneRegex = /^\d{10}$/;
-    const cleanNumber = text.replace(/[-\s]/g, '');
+    // Pakistan mobile format: 3XX-XXXXXXX (10 digits total)
+    const phoneRegex = /^3\d{2}-\d{7}$/;
     
-    if (cleanNumber.length === 0) {
+    if (text.length === 0) {
       setPhoneError('Phone number is required');
       return false;
-    } else if (!phoneRegex.test(cleanNumber)) {
-      setPhoneError('Enter 10 digit mobile number');
+    } else if (!phoneRegex.test(text)) {
+      setPhoneError('Enter valid Pakistan mobile number (3XX-XXXXXXX)');
       return false;
     } else {
       setPhoneError('');
@@ -101,9 +101,25 @@ const SignUpScreen = () => {
   };
 
   const handlePhoneChange = (text) => {
-    const cleanNumber = text.replace(/[^\d]/g, '').slice(0, 10);
-    setPhoneNumber(cleanNumber);
-    validatePhone(cleanNumber);
+    // Remove any non-digit characters from input
+    const digitsOnly = text.replace(/\D/g, '');
+    
+    // Limit to 10 digits
+    const limitedDigits = digitsOnly.slice(0, 10);
+    
+    // Format the number with hyphen
+    let formattedNumber = '';
+    if (limitedDigits.length > 0) {
+      // First 3 digits
+      formattedNumber = limitedDigits.slice(0, 3);
+      // Add remaining digits with hyphen
+      if (limitedDigits.length > 3) {
+        formattedNumber += '-' + limitedDigits.slice(3);
+      }
+    }
+    
+    setPhoneNumber(formattedNumber);
+    validatePhone(formattedNumber);
   };
 
   const handleSignIn = () => {
@@ -115,17 +131,30 @@ const SignUpScreen = () => {
     const isPhoneValid = validatePhone(phoneNumber);
 
     if (isNameValid && isPhoneValid) {
-      navigation.navigate('OTPVerification', { 
-        phoneNumber: `+92${phoneNumber}` 
-      });
-    } else {
-      if (!isNameValid) {
-        setNameError('Please enter a valid name');
-      }
-      if (!isPhoneValid) {
-        setPhoneError('Please enter a valid phone number');
-      }
+      // Remove hyphen before sending
+      const cleanNumber = phoneNumber.replace(/-/g, '');
+      navigation.navigate('OTPVerification', { phoneNumber: `+92${cleanNumber}` });
     }
+  };
+
+  // Add this function to check if phone number is complete
+  const isPhoneComplete = (number) => {
+    return number.length === 11; // 10 digits + 1 hyphen
+  };
+
+  // Add this function to check if name is complete (at least 3 characters)
+  const isNameComplete = (name) => {
+    return name.trim().length >= 3;
+  };
+
+  // Add this function to check if phone number is complete
+  const isPhoneComplete = (number) => {
+    return number.length === 11; // 10 digits + 1 hyphen
+  };
+
+  // Add this function to check if name is complete (at least 3 characters)
+  const isNameComplete = (name) => {
+    return name.trim().length >= 3;
   };
 
   return (
@@ -176,12 +205,12 @@ const SignUpScreen = () => {
           </View>
           <TextInput
             style={[styles.phoneInput, phoneError ? styles.inputError : null]}
-            placeholder="Mobile Number"
+            placeholder="3XX-XXXXXXX"
             value={phoneNumber}
             onChangeText={handlePhoneChange}
             placeholderTextColor="#999"
             keyboardType="numeric"
-            maxLength={10}
+            maxLength={11}
           />
         </View>
         {phoneError ? <Text style={styles.errorText}>{phoneError}</Text> : null}
@@ -190,10 +219,10 @@ const SignUpScreen = () => {
       <TouchableOpacity 
         style={[
           styles.signUpButton,
-          (!name || !phoneNumber) ? styles.disabledButton : null
+          (!isNameComplete(name) || !isPhoneComplete(phoneNumber)) ? styles.disabledButton : null
         ]}
         onPress={handleSignUp}
-        disabled={!name || !phoneNumber}
+        disabled={!isNameComplete(name) || !isPhoneComplete(phoneNumber)}
       >
         <Text style={styles.signUpButtonText}>Sign Up</Text>
       </TouchableOpacity>
