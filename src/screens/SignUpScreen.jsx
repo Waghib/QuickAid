@@ -147,15 +147,6 @@ const SignUpScreen = () => {
     return name.trim().length >= 3;
   };
 
-  // Add this function to check if phone number is complete
-  const isPhoneComplete = (number) => {
-    return number.length === 11; // 10 digits + 1 hyphen
-  };
-
-  // Add this function to check if name is complete (at least 3 characters)
-  const isNameComplete = (name) => {
-    return name.trim().length >= 3;
-  };
 
   return (
     <View style={styles.container}>
