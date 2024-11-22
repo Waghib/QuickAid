@@ -98,9 +98,7 @@ const SignInScreen = () => {
   };
 
   const handleSignUp = () => {
-    navigation.navigate('SignUp', {
-      transition: 'slide_from_right'
-    });
+    navigation.navigate('SignUp');
   };
 
   const handleSignIn = () => {
