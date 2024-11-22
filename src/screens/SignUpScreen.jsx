@@ -10,55 +10,73 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
-const SignInScreen = () => {
+const SignUpScreen = () => {
   const navigation = useNavigation();
   const { height, width } = useWindowDimensions();
+  const [name, setName] = useState('');
+  const [nameError, setNameError] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [phoneError, setPhoneError] = useState('');
 
   // Calculate responsive sizes
-  const getFontSize = (size) => (width * size) / 430; // Increased base width
-  const getVerticalSpacing = (size) => (height * size) / 900; // Increased base height
+  const getFontSize = (size) => (width * size) / 430;
+  const getVerticalSpacing = (size) => (height * size) / 900;
 
   const dynamicStyles = {
     topSection: {
-      height: height * 0.25, // Reduced from 0.28
+      height: height * 0.25,
     },
     logoText: {
-      fontSize: getFontSize(38), // Reduced from 42
+      fontSize: getFontSize(38),
     },
     tagline: {
-      fontSize: getFontSize(16), // Reduced from 18
+      fontSize: getFontSize(16),
       marginTop: getVerticalSpacing(12),
     },
     toggleContainer: {
       marginTop: -getVerticalSpacing(20),
-      padding: width * 0.012, // Reduced from 0.015
+      padding: width * 0.012,
     },
     toggleButton: {
-      padding: width * 0.03, // Reduced from 0.04
+      padding: width * 0.03,
     },
     toggleText: {
-      fontSize: getFontSize(14), // Reduced from 16
+      fontSize: getFontSize(14),
     },
     inputContainer: {
-      padding: width * 0.04, // Reduced from 0.05
+      padding: width * 0.04,
       gap: getVerticalSpacing(14),
     },
     input: {
-      fontSize: getFontSize(14), // Reduced from 16
+      fontSize: getFontSize(14),
       padding: width * 0.035,
     },
     buttonText: {
-      fontSize: getFontSize(14), // Reduced from 16
+      fontSize: getFontSize(14),
     },
     termsText: {
-      fontSize: getFontSize(12), // Reduced from 14
+      fontSize: getFontSize(12),
       marginTop: getVerticalSpacing(18),
     },
   };
 
-  // Phone validation function
+  // Name validation
+  const validateName = (text) => {
+    const nameRegex = /^[A-Za-z\s]+$/;
+    
+    if (text.length === 0) {
+      setNameError('Name is required');
+      return false;
+    } else if (!nameRegex.test(text)) {
+      setNameError('Name should only contain letters');
+      return false;
+    } else {
+      setNameError('');
+      return true;
+    }
+  };
+
+  // Phone validation
   const validatePhone = (text) => {
     const phoneRegex = /^\d{10}$/;
     const cleanNumber = text.replace(/[-\s]/g, '');
@@ -75,26 +93,32 @@ const SignInScreen = () => {
     }
   };
 
+  const handleNameChange = (text) => {
+    // Only allow letters and spaces
+    const cleanName = text.replace(/[^A-Za-z\s]/g, '');
+    setName(cleanName);
+    validateName(cleanName);
+  };
+
   const handlePhoneChange = (text) => {
-    // Only allow numbers, limit to 10 digits
     const cleanNumber = text.replace(/[^\d]/g, '').slice(0, 10);
     setPhoneNumber(cleanNumber);
     validatePhone(cleanNumber);
   };
 
-  const handleSignUp = () => {
-    navigation.navigate('SignUp', {
+  const handleSignIn = () => {
+    navigation.navigate('SignIn', {
       transition: 'slide_from_right'
     });
   };
 
-  const handleSignIn = () => {
+  const handleSignUp = () => {
+    const isNameValid = validateName(name);
     const isPhoneValid = validatePhone(phoneNumber);
 
-    if (isPhoneValid) {
+    if (isNameValid && isPhoneValid) {
+      // Navigate to OTP screen or handle signup
       navigation.navigate('OTPVerification', { phoneNumber: `+92${phoneNumber}` });
-    } else {
-      Alert.alert('Validation Error', 'Please check your input fields');
     }
   };
 
@@ -105,8 +129,7 @@ const SignInScreen = () => {
       <View style={[styles.topSection, dynamicStyles.topSection]}>
         <View style={styles.logoContainer}>
           <Text style={[styles.logoText, dynamicStyles.logoText]}>
-            <Text style={styles.quickText}>QUICK</Text>
-            <Text style={styles.quickText}>AID</Text>
+            <Text style={styles.quickText}>QUICKAID</Text>
           </Text>
           <Text style={[styles.tagline, dynamicStyles.tagline]}>
             Your Health Companion
@@ -115,62 +138,66 @@ const SignInScreen = () => {
       </View>
 
       <View style={[styles.toggleContainer, dynamicStyles.toggleContainer]}>
-        <TouchableOpacity 
-          style={[styles.inactiveToggle, dynamicStyles.toggleButton]}
-          onPress={handleSignUp}
-        >
-          <Text style={[styles.inactiveToggleText, dynamicStyles.toggleText]}>
+        <TouchableOpacity style={[styles.activeToggle, dynamicStyles.toggleButton]}>
+          <Text style={[styles.activeToggleText, dynamicStyles.toggleText]}>
             Sign Up
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.activeToggle, dynamicStyles.toggleButton]}>
-          <Text style={[styles.activeToggleText, dynamicStyles.toggleText]}>
+        <TouchableOpacity 
+          style={[styles.inactiveToggle, dynamicStyles.toggleButton]}
+          onPress={handleSignIn}
+        >
+          <Text style={[styles.inactiveToggleText, dynamicStyles.toggleText]}>
             Sign In
           </Text>
         </TouchableOpacity>
       </View>
 
-      {/* Input Fields */}
       <View style={[styles.inputContainer, dynamicStyles.inputContainer]}>
-        <View>
-          <View style={styles.phoneContainer}>
-            <View style={styles.countryCode}>
-              <Text>🇵🇰</Text>
-              <Text style={styles.countryCodeText}>+92</Text>
-            </View>
-            <TextInput
-              style={[styles.phoneInput, phoneError ? styles.inputError : null]}
-              placeholder="Mobile Number"
-              value={phoneNumber}
-              onChangeText={handlePhoneChange}
-              placeholderTextColor="#999"
-              keyboardType="numeric"
-              maxLength={10}
-            />
+        <TextInput
+          style={[styles.input, nameError ? styles.inputError : null]}
+          placeholder="Full Name"
+          value={name}
+          onChangeText={handleNameChange}
+          placeholderTextColor="#999"
+        />
+        {nameError ? <Text style={styles.errorText}>{nameError}</Text> : null}
+
+        <View style={styles.phoneContainer}>
+          <View style={styles.countryCode}>
+            <Text>🇵🇰</Text>
+            <Text style={styles.countryCodeText}>+92</Text>
           </View>
-          {phoneError ? <Text style={styles.errorText}>{phoneError}</Text> : null}
+          <TextInput
+            style={[styles.phoneInput, phoneError ? styles.inputError : null]}
+            placeholder="Mobile Number"
+            value={phoneNumber}
+            onChangeText={handlePhoneChange}
+            placeholderTextColor="#999"
+            keyboardType="numeric"
+            maxLength={10}
+          />
         </View>
+        {phoneError ? <Text style={styles.errorText}>{phoneError}</Text> : null}
       </View>
 
       <TouchableOpacity 
         style={[
-          styles.signInButton,
-          !phoneNumber ? styles.disabledButton : null
+          styles.signUpButton,
+          (!name || !phoneNumber) ? styles.disabledButton : null
         ]}
-        onPress={handleSignIn}
-        disabled={!phoneNumber}
+        onPress={handleSignUp}
+        disabled={!name || !phoneNumber}
       >
-        <Text style={styles.signInButtonText}>Sign In</Text>
+        <Text style={styles.signUpButtonText}>Sign Up</Text>
       </TouchableOpacity>
 
-      {/* Google Sign In */}
       <TouchableOpacity style={styles.googleButton}>
         <Text style={styles.googleButtonText}>Connect with Google</Text>
       </TouchableOpacity>
 
-      {/* Terms and Conditions */}
       <Text style={[styles.termsText, dynamicStyles.termsText]}>
-        By clicking sign in you agree to our Terms and Conditions
+        By clicking sign up you agree to our Terms and Conditions
       </Text>
     </View>
   );
@@ -182,7 +209,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   topSection: {
-    height: '25%',
     backgroundColor: '#2B95E1',
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
@@ -208,6 +234,7 @@ const styles = StyleSheet.create({
   toggleContainer: {
     flexDirection: 'row',
     marginHorizontal: '5%',
+    marginTop: -20,
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
     elevation: 5,
@@ -234,8 +261,16 @@ const styles = StyleSheet.create({
     color: '#666666',
   },
   inputContainer: {
-    padding: 20,
+    padding: '5%',
     gap: 15,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    padding: '4%',
+    fontSize: 16,
+    color: '#666666',
   },
   phoneContainer: {
     flexDirection: 'row',
@@ -254,7 +289,6 @@ const styles = StyleSheet.create({
   countryCodeText: {
     fontSize: 14,
     color: '#666666',
-    fontWeight: '400',
   },
   phoneInput: {
     flex: 1,
@@ -265,21 +299,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666666',
   },
-  signInButton: {
+  signUpButton: {
     backgroundColor: '#2B95E1',
     marginHorizontal: '5%',
-    padding: 12,
+    padding: 15,
     borderRadius: 8,
     alignItems: 'center',
   },
-  signInButtonText: {
+  signUpButtonText: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
   },
   googleButton: {
     backgroundColor: '#FFFFFF',
-    marginHorizontal: 20,
+    marginHorizontal: '5%',
     marginTop: 12,
     padding: 12,
     borderRadius: 8,
@@ -313,4 +347,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default SignInScreen; 
+export default SignUpScreen;
