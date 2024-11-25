@@ -15,7 +15,7 @@ const OTPVerificationScreen = () => {
   const navigation = useNavigation();
   const { height, width } = useWindowDimensions();
   const { phoneNumber } = route.params;
-  const [otp, setOtp] = useState(['', '', '', '']);
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const inputRefs = useRef([]);
 
   const handleBack = () => {
@@ -24,7 +24,7 @@ const OTPVerificationScreen = () => {
 
   const handleVerify = () => {
     const otpString = otp.join('');
-    if (otpString.length === 4) {
+    if (otpString.length === 6) {
       console.log('Verifying OTP:', otpString);
       // Add your OTP verification logic here
       // For example:
@@ -41,7 +41,7 @@ const OTPVerificationScreen = () => {
     newOtp[index] = cleanText;
     setOtp(newOtp);
 
-    if (cleanText && index < 3) {
+    if (cleanText && index < 5) {
       inputRefs.current[index + 1].focus();
     }
   };
@@ -75,23 +75,23 @@ const OTPVerificationScreen = () => {
     },
     otpContainer: {
       marginTop: getVerticalSpacing(60),
-      gap: width * 0.03,
+      gap: width * 0.02,
     },
     otpInput: {
-      width: 60,
-      height: 60,
+      width: width * 0.12,
+      height: width * 0.12,
       borderWidth: 2,
       borderColor: '#E0E0E0',
       borderRadius: 12,
       textAlign: 'center',
-      fontSize: 28,
+      fontSize: getFontSize(24),
       fontWeight: 'bold',
       backgroundColor: '#F5F5F5',
       paddingTop: 8,
       paddingBottom: 0,
       textAlignVertical: 'center',
       includeFontPadding: false,
-      lineHeight: 50,
+      lineHeight: width * 0.12 - 10,
     },
     verifyButton: {
       marginTop: getVerticalSpacing(40),
@@ -207,20 +207,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: '5%',
   },
   otpInput: {
-    width: 60,
-    height: 60,
+    width: 50,
+    height: 50,
     borderWidth: 2,
     borderColor: '#E0E0E0',
     borderRadius: 12,
     textAlign: 'center',
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
     backgroundColor: '#F5F5F5',
     paddingTop: 8,
     paddingBottom: 0,
     textAlignVertical: 'center',
     includeFontPadding: false,
-    lineHeight: 50,
+    lineHeight: 40,
   },
   verifyButton: {
     backgroundColor: '#2B95E1',
