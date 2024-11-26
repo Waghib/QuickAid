@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,30 +7,66 @@ import {
   TouchableOpacity,
   StatusBar,
   useWindowDimensions,
+  Alert,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import auth from '@react-native-firebase/auth';
 
 const OTPVerificationScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const { height, width } = useWindowDimensions();
-  const { phoneNumber } = route.params;
-  const [otp, setOtp] = useState(['', '', '', '']);
+  const { phoneNumber, name } = route.params;
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [confirm, setConfirm] = useState(null);
   const inputRefs = useRef([]);
+
+  useEffect(() => {
+    signInWithPhoneNumber();
+  }, []);
+
+  const signInWithPhoneNumber = async () => {
+    try {
+      const confirmation = await auth().signInWithPhoneNumber(phoneNumber);
+      setConfirm(confirmation);
+      Alert.alert('OTP Sent', 'Please check your phone for the verification code.');
+    } catch (error) {
+      console.error('Error sending OTP:', error);
+      Alert.alert(
+        'Error',
+        'Failed to send verification code. Please try again.'
+      );
+    }
+  };
 
   const handleBack = () => {
     navigation.goBack();
   };
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     const otpString = otp.join('');
-    if (otpString.length === 4) {
-      console.log('Verifying OTP:', otpString);
-      // Add your OTP verification logic here
-      // For example:
-      // verifyOTP(otpString).then(() => {
-      //   navigation.navigate('Home');
-      // });
+    if (otpString.length === 6) {
+      try {
+        const credential = await confirm.confirm(otpString);
+        if (credential) {
+          Alert.alert(
+            'Success',
+            'Phone number verified successfully!',
+            [
+              {
+                text: 'OK',
+                onPress: () => navigation.navigate('Home') // Replace with your home screen
+              }
+            ]
+          );
+        }
+      } catch (error) {
+        console.error('Error verifying OTP:', error);
+        Alert.alert(
+          'Invalid Code',
+          'The verification code you entered is invalid. Please try again.'
+        );
+      }
     }
   };
 
@@ -41,7 +77,7 @@ const OTPVerificationScreen = () => {
     newOtp[index] = cleanText;
     setOtp(newOtp);
 
-    if (cleanText && index < 3) {
+    if (cleanText && index < 5) {
       inputRefs.current[index + 1].focus();
     }
   };
@@ -55,6 +91,18 @@ const OTPVerificationScreen = () => {
       if (index > 0) {
         inputRefs.current[index - 1].focus();
       }
+    }
+  };
+
+  const handleResendOTP = async () => {
+    try {
+      await signInWithPhoneNumber();
+    } catch (error) {
+      console.error('Error resending OTP:', error);
+      Alert.alert(
+        'Error',
+        'Failed to resend verification code. Please try again.'
+      );
     }
   };
 
@@ -75,23 +123,23 @@ const OTPVerificationScreen = () => {
     },
     otpContainer: {
       marginTop: getVerticalSpacing(60),
-      gap: width * 0.03,
+      gap: width * 0.02,
     },
     otpInput: {
-      width: 60,
-      height: 60,
+      width: width * 0.12,
+      height: width * 0.12,
       borderWidth: 2,
       borderColor: '#E0E0E0',
       borderRadius: 12,
       textAlign: 'center',
-      fontSize: 28,
+      fontSize: getFontSize(24),
       fontWeight: 'bold',
       backgroundColor: '#F5F5F5',
       paddingTop: 8,
       paddingBottom: 0,
       textAlignVertical: 'center',
       includeFontPadding: false,
-      lineHeight: 50,
+      lineHeight: width * 0.12 - 10,
     },
     verifyButton: {
       marginTop: getVerticalSpacing(40),
@@ -157,7 +205,10 @@ const OTPVerificationScreen = () => {
         </Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.resendContainer}>
+      <TouchableOpacity 
+        style={styles.resendContainer}
+        onPress={handleResendOTP}
+      >
         <Text style={[styles.resendText, dynamicStyles.resendText]}>
           Didn't receive code?{' '}
         </Text>
@@ -207,20 +258,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: '5%',
   },
   otpInput: {
-    width: 60,
-    height: 60,
+    width: 50,
+    height: 50,
     borderWidth: 2,
     borderColor: '#E0E0E0',
     borderRadius: 12,
     textAlign: 'center',
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
     backgroundColor: '#F5F5F5',
     paddingTop: 8,
     paddingBottom: 0,
     textAlignVertical: 'center',
     includeFontPadding: false,
-    lineHeight: 50,
+    lineHeight: 40,
   },
   verifyButton: {
     backgroundColor: '#2B95E1',
