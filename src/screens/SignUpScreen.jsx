@@ -9,6 +9,10 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { firebase, auth } from '../config/firebase';
+import firestore from '@react-native-firebase/firestore';
+import { Alert } from 'react-native';
+// import firestore from '@react-native-firebase/firestore';
 
 const SignUpScreen = () => {
   const navigation = useNavigation();
@@ -85,7 +89,7 @@ const SignUpScreen = () => {
       setPhoneError('Phone number is required');
       return false;
     } else if (!phoneRegex.test(text)) {
-      setPhoneError('Enter valid Pakistan mobile number (3XX-XXXXXXX)');
+      setPhoneError('Enter valid mobile number (3XX-XXXXXXX)');
       return false;
     } else {
       setPhoneError('');
@@ -126,14 +130,88 @@ const SignUpScreen = () => {
     navigation.navigate('SignIn');
   };
 
-  const handleSignUp = () => {
+  const handleSignUp = async () => {
     const isNameValid = validateName(name);
     const isPhoneValid = validatePhone(phoneNumber);
-
+  
     if (isNameValid && isPhoneValid) {
-      // Remove hyphen before sending
-      const cleanNumber = phoneNumber.replace(/-/g, '');
-      navigation.navigate('OTPVerification', { phoneNumber: `+92${cleanNumber}` });
+      const maxRetries = 3;
+      let retryCount = 0;
+
+      const attemptSignUp = async () => {
+        try {
+          // Remove hyphen before sending
+          const cleanNumber = phoneNumber.replace(/-/g, '');
+          const fullPhoneNumber = `+92${cleanNumber}`;
+  
+          // Use firestore() to get the instance
+          const userDoc = await firestore()
+            .collection('users')
+            .doc(fullPhoneNumber)
+            .get();
+  
+          if (userDoc.exists) {
+            Alert.alert('Error', 'This phone number is already registered!');
+            return;
+          }
+  
+          // Use firestore() consistently
+          await firestore()
+            .collection('users')
+            .doc(fullPhoneNumber)
+            .set({
+              name: name,
+              phoneNumber: fullPhoneNumber,
+              createdAt: firestore.FieldValue.serverTimestamp(),
+              lastLogin: firestore.FieldValue.serverTimestamp()
+            });
+  
+            Alert.alert(
+              'Success', 
+              'Account created successfully!',
+              [
+                {
+                  text: 'OK',
+                  onPress: () => {
+                    navigation.navigate('OTPVerification', { 
+                      phoneNumber: fullPhoneNumber,
+                      name: name
+                    });
+                  }
+                }
+              ]
+            );
+  
+        } catch (error) {
+          console.error('Signup error:', error);
+          
+          if (error.code === 'firestore/unavailable' && retryCount < maxRetries) {
+            retryCount++;
+            const backoffDelay = Math.pow(2, retryCount) * 1000;
+            
+            console.log(`Retry attempt ${retryCount} of ${maxRetries}. Waiting ${backoffDelay/1000} seconds...`);
+            
+            return new Promise((resolve) => {
+              setTimeout(async () => {
+                try {
+                  resolve(await attemptSignUp());
+                } catch (retryError) {
+                  console.error('Retry failed:', retryError);
+                  resolve(null);
+                }
+              }, backoffDelay);
+            });
+          }
+
+          Alert.alert(
+            'Error',
+            'Unable to connect to the server. Please check your internet connection and try again later.'
+          );
+          return null;
+        }
+      };
+
+      await attemptSignUp();
     }
   };
 
