@@ -7,8 +7,10 @@ import {
   TouchableOpacity,
   StatusBar,
   useWindowDimensions,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import firestore from '@react-native-firebase/firestore';
 
 const SignInScreen = () => {
   const navigation = useNavigation();
@@ -101,13 +103,53 @@ const SignInScreen = () => {
     navigation.navigate('SignUp');
   };
 
-  const handleSignIn = () => {
+  const handleSignIn = async () => {
     const isPhoneValid = validatePhone(phoneNumber);
 
     if (isPhoneValid) {
-      // Remove hyphen before sending
-      const cleanNumber = phoneNumber.replace(/-/g, '');
-      navigation.navigate('OTPVerification', { phoneNumber: `+92${cleanNumber}` });
+      try {
+        // Remove hyphen before sending
+        const cleanNumber = phoneNumber.replace(/-/g, '');
+        const fullPhoneNumber = `+92${cleanNumber}`;
+
+        // Check if user exists in Firestore
+        const userDoc = await firestore()
+          .collection('users')
+          .doc(fullPhoneNumber)
+          .get();
+
+        if (!userDoc.exists) {
+          Alert.alert(
+            'Account Not Found', 
+            'This phone number is not registered. Please sign up first.'
+          );
+          navigation.navigate('SignUp');
+          return;
+        }
+
+        // Update last login timestamp
+        await firestore()
+          .collection('users')
+          .doc(fullPhoneNumber)
+          .update({
+            lastLogin: firestore.FieldValue.serverTimestamp()
+          });
+
+        console.log('User signed in successfully');
+
+        // If user exists, proceed to OTP verification
+        navigation.navigate('OTPVerification', { 
+          phoneNumber: fullPhoneNumber,
+          name: userDoc.data().name // Pass the user's name from Firestore
+        });
+
+      } catch (error) {
+        console.error('Sign in error:', error);
+        Alert.alert(
+          'Error',
+          'Unable to sign in. Please check your internet connection and try again.'
+        );
+      }
     } else {
       Alert.alert('Validation Error', 'Please enter a valid phone number');
     }
