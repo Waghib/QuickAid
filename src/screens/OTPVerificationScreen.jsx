@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,30 +7,66 @@ import {
   TouchableOpacity,
   StatusBar,
   useWindowDimensions,
+  Alert,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import auth from '@react-native-firebase/auth';
 
 const OTPVerificationScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const { height, width } = useWindowDimensions();
-  const { phoneNumber } = route.params;
+  const { phoneNumber, name } = route.params;
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [confirm, setConfirm] = useState(null);
   const inputRefs = useRef([]);
+
+  useEffect(() => {
+    signInWithPhoneNumber();
+  }, []);
+
+  const signInWithPhoneNumber = async () => {
+    try {
+      const confirmation = await auth().signInWithPhoneNumber(phoneNumber);
+      setConfirm(confirmation);
+      Alert.alert('OTP Sent', 'Please check your phone for the verification code.');
+    } catch (error) {
+      console.error('Error sending OTP:', error);
+      Alert.alert(
+        'Error',
+        'Failed to send verification code. Please try again.'
+      );
+    }
+  };
 
   const handleBack = () => {
     navigation.goBack();
   };
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     const otpString = otp.join('');
     if (otpString.length === 6) {
-      console.log('Verifying OTP:', otpString);
-      // Add your OTP verification logic here
-      // For example:
-      // verifyOTP(otpString).then(() => {
-      //   navigation.navigate('Home');
-      // });
+      try {
+        const credential = await confirm.confirm(otpString);
+        if (credential) {
+          Alert.alert(
+            'Success',
+            'Phone number verified successfully!',
+            [
+              {
+                text: 'OK',
+                onPress: () => navigation.navigate('Home') // Replace with your home screen
+              }
+            ]
+          );
+        }
+      } catch (error) {
+        console.error('Error verifying OTP:', error);
+        Alert.alert(
+          'Invalid Code',
+          'The verification code you entered is invalid. Please try again.'
+        );
+      }
     }
   };
 
@@ -55,6 +91,18 @@ const OTPVerificationScreen = () => {
       if (index > 0) {
         inputRefs.current[index - 1].focus();
       }
+    }
+  };
+
+  const handleResendOTP = async () => {
+    try {
+      await signInWithPhoneNumber();
+    } catch (error) {
+      console.error('Error resending OTP:', error);
+      Alert.alert(
+        'Error',
+        'Failed to resend verification code. Please try again.'
+      );
     }
   };
 
@@ -157,7 +205,10 @@ const OTPVerificationScreen = () => {
         </Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.resendContainer}>
+      <TouchableOpacity 
+        style={styles.resendContainer}
+        onPress={handleResendOTP}
+      >
         <Text style={[styles.resendText, dynamicStyles.resendText]}>
           Didn't receive code?{' '}
         </Text>
