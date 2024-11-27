@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   TextInput,
   TouchableOpacity,
   StatusBar,
@@ -11,6 +10,8 @@ import {
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import auth from '@react-native-firebase/auth';
+import { authStyles } from '../styles/authStyles';
+import { getDynamicStyles } from '../styles/dynamicStyles';
 
 const OTPVerificationScreen = () => {
   const route = useRoute();
@@ -20,6 +21,8 @@ const OTPVerificationScreen = () => {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [confirm, setConfirm] = useState(null);
   const inputRefs = useRef([]);
+
+  const dynamicStyles = getDynamicStyles(width, height);
 
   useEffect(() => {
     signInWithPhoneNumber();
@@ -106,79 +109,31 @@ const OTPVerificationScreen = () => {
     }
   };
 
-  // Calculate responsive sizes
-  const getFontSize = (size) => (width * size) / 430;
-  const getVerticalSpacing = (size) => (height * size) / 900;
-
-  const dynamicStyles = {
-    topSection: {
-      height: height * 0.25,
-    },
-    title: {
-      fontSize: getFontSize(24),
-      marginTop: getVerticalSpacing(70),
-    },
-    subtitle: {
-      fontSize: getFontSize(14),
-    },
-    otpContainer: {
-      marginTop: getVerticalSpacing(60),
-      gap: width * 0.02,
-    },
-    otpInput: {
-      width: width * 0.12,
-      height: width * 0.12,
-      borderWidth: 2,
-      borderColor: '#E0E0E0',
-      borderRadius: 12,
-      textAlign: 'center',
-      fontSize: getFontSize(24),
-      fontWeight: 'bold',
-      backgroundColor: '#F5F5F5',
-      paddingTop: 8,
-      paddingBottom: 0,
-      textAlignVertical: 'center',
-      includeFontPadding: false,
-      lineHeight: width * 0.12 - 10,
-    },
-    verifyButton: {
-      marginTop: getVerticalSpacing(40),
-      padding: width * 0.035,
-    },
-    verifyText: {
-      fontSize: getFontSize(16),
-    },
-    resendText: {
-      fontSize: getFontSize(14),
-      marginTop: getVerticalSpacing(20),
-    },
-  };
-
   return (
-    <View style={styles.container}>
+    <View style={authStyles.container}>
       <StatusBar backgroundColor="#2B95E1" barStyle="light-content" />
       
-      <View style={[styles.topSection, dynamicStyles.topSection]}>
+      <View style={[authStyles.topSection, dynamicStyles.topSection]}>
         <TouchableOpacity 
-          style={styles.backButton} 
+          style={authStyles.backButton} 
           onPress={handleBack}
         >
-          <Text style={styles.backArrow}>{"❮"}</Text>
+          <Text style={authStyles.backArrow}>{"❮"}</Text>
         </TouchableOpacity>
-        <Text style={[styles.title, dynamicStyles.title]}>
+        <Text style={[authStyles.title, dynamicStyles.title]}>
           Phone Verification
         </Text>
-        <Text style={[styles.subtitle, dynamicStyles.subtitle]}>
+        <Text style={[authStyles.subtitle, dynamicStyles.subtitle]}>
           Enter your OTP code sent to {phoneNumber}
         </Text>
       </View>
 
-      <View style={[styles.otpContainer, dynamicStyles.otpContainer]}>
+      <View style={[authStyles.otpContainer, dynamicStyles.otpContainer]}>
         {otp.map((digit, index) => (
           <TextInput
             key={index}
             ref={(ref) => (inputRefs.current[index] = ref)}
-            style={[styles.otpInput, dynamicStyles.otpInput]}
+            style={[authStyles.otpInput, dynamicStyles.otpInput]}
             value={digit}
             onChangeText={(text) => handleOtpChange(text, index)}
             onKeyPress={(e) => handleKeyPress(e, index)}
@@ -193,111 +148,31 @@ const OTPVerificationScreen = () => {
 
       <TouchableOpacity 
         style={[
-          styles.verifyButton,
+          authStyles.verifyButton,
           dynamicStyles.verifyButton,
-          !otp.every(digit => digit) && styles.disabledButton
+          !otp.every(digit => digit) && authStyles.disabledButton
         ]}
         onPress={handleVerify}
         disabled={!otp.every(digit => digit)}
       >
-        <Text style={[styles.verifyButtonText, dynamicStyles.verifyText]}>
+        <Text style={[authStyles.verifyButtonText, dynamicStyles.verifyText]}>
           Verify Now
         </Text>
       </TouchableOpacity>
 
       <TouchableOpacity 
-        style={styles.resendContainer}
+        style={authStyles.resendContainer}
         onPress={handleResendOTP}
       >
-        <Text style={[styles.resendText, dynamicStyles.resendText]}>
+        <Text style={[authStyles.resendText, dynamicStyles.resendText]}>
           Didn't receive code?{' '}
         </Text>
-        <Text style={[styles.resendLink, dynamicStyles.resendText]}>
+        <Text style={[authStyles.resendLink, dynamicStyles.resendText]}>
           Resend
         </Text>
       </TouchableOpacity>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  topSection: {
-    backgroundColor: '#2B95E1',
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    alignItems: 'center',
-  },
-  backButton: {
-    position: 'absolute',
-    left: 20,
-    top: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  backArrow: {
-    fontSize: 20,
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  title: {
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 15,
-  },
-  subtitle: {
-    color: '#FFFFFF',
-    opacity: 0.95,
-  },
-  otpContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    paddingHorizontal: '5%',
-  },
-  otpInput: {
-    width: 50,
-    height: 50,
-    borderWidth: 2,
-    borderColor: '#E0E0E0',
-    borderRadius: 12,
-    textAlign: 'center',
-    fontSize: 24,
-    fontWeight: 'bold',
-    backgroundColor: '#F5F5F5',
-    paddingTop: 8,
-    paddingBottom: 0,
-    textAlignVertical: 'center',
-    includeFontPadding: false,
-    lineHeight: 40,
-  },
-  verifyButton: {
-    backgroundColor: '#2B95E1',
-    marginHorizontal: '5%',
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  verifyButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  disabledButton: {
-    opacity: 0.7,
-    backgroundColor: '#B0BEC5',
-  },
-  resendContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  resendText: {
-    color: '#666666',
-  },
-  resendLink: {
-    color: '#2B95E1',
-    fontWeight: '600',
-  },
-});
 
 export default OTPVerificationScreen;
