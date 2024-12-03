@@ -1,0 +1,187 @@
+import React, { useState } from 'react';
+import { 
+  View, 
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet, 
+  StatusBar, 
+  useWindowDimensions, 
+  Alert 
+} from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { authStyles } from '../styles/authStyles';
+import { getDynamicStyles } from '../styles/dynamicStyles';
+import { AuthLogo } from '../components/authComponents';
+
+const FirstResponderScreen = () => {
+  const navigation = useNavigation();
+  const { height, width } = useWindowDimensions();
+  const dynamicStyles = getDynamicStyles(width, height);
+
+  const [cnic, setCnic] = useState('');
+  const [workerId, setWorkerId] = useState('');
+  const [cnicError, setCnicError] = useState('');
+  const [workerIdError, setWorkerIdError] = useState('');
+
+  const formatCNIC = (text) => {
+    // Remove any non-numeric characters
+    const cleaned = text.replace(/[^0-9]/g, '');
+    
+    // Add hyphens after 5 and 12 digits
+    let formatted = cleaned;
+    if (cleaned.length > 5) {
+      formatted = `${cleaned.slice(0, 5)}-${cleaned.slice(5)}`;
+    }
+    if (cleaned.length > 12) {
+      formatted = `${formatted.slice(0, 13)}-${formatted.slice(13)}`;
+    }
+    
+    return formatted;
+  };
+
+  const handleCNICChange = (text) => {
+    const formatted = formatCNIC(text);
+    setCnic(formatted);
+    
+    // Validate CNIC format
+    if (formatted.length > 0 && formatted.replace(/-/g, '').length !== 13) {
+      setCnicError('CNIC must be 13 digits (XXXXX-XXXXXXX-X)');
+    } else {
+      setCnicError('');
+    }
+  };
+
+  const handleWorkerIdChange = (text) => {
+    // Only allow numbers and limit to 4 digits
+    const cleaned = text.replace(/[^0-9]/g, '').slice(0, 4);
+    setWorkerId(cleaned);
+    
+    if (cleaned.length > 0 && cleaned.length !== 4) {
+      setWorkerIdError('Worker ID must be 4 digits');
+    } else {
+      setWorkerIdError('');
+    }
+  };
+
+  const handleVerify = () => {
+    // Validate both fields before proceeding
+    if (!cnic || !workerId) {
+      Alert.alert('Error', 'Please fill in all fields.');
+      return;
+    }
+
+    const cleanedCNIC = cnic.replace(/-/g, '');
+    if (cleanedCNIC.length !== 13) {
+      setCnicError('CNIC must be 13 digits');
+      return;
+    }
+
+    if (workerId.length !== 4) {
+      setWorkerIdError('Worker ID must be 4 digits');
+      return;
+    }
+
+    Alert.alert('Success', 'Verification successful!');
+  };
+
+  return (
+    <View style={authStyles.container}>
+      <StatusBar backgroundColor="#2B95E1" barStyle="light-content" />
+      
+      <View style={[authStyles.topSection, dynamicStyles.topSection]}>
+        <AuthLogo dynamicStyles={dynamicStyles} />
+      </View>
+
+      <View style={styles.content}>
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={[styles.input, cnicError ? styles.inputError : null]}
+            value={cnic}
+            onChangeText={handleCNICChange}
+            placeholder="CNIC (XXXXX-XXXXXXX-X)"
+            placeholderTextColor="#999"
+            keyboardType="numeric"
+            maxLength={15} // 13 digits + 2 hyphens
+          />
+          {cnicError ? <Text style={styles.errorText}>{cnicError}</Text> : null}
+        </View>
+
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={[styles.input, workerIdError ? styles.inputError : null]}
+            value={workerId}
+            onChangeText={handleWorkerIdChange}
+            placeholder="Worker ID (4 digits)"
+            placeholderTextColor="#999"
+            keyboardType="numeric"
+            maxLength={4}
+          />
+          {workerIdError ? <Text style={styles.errorText}>{workerIdError}</Text> : null}
+        </View>
+
+        <TouchableOpacity 
+          style={[
+            styles.button, 
+            (!cnic || !workerId || cnicError || workerIdError) && styles.buttonDisabled
+          ]}
+          onPress={handleVerify}
+          disabled={!cnic || !workerId || cnicError || workerIdError}
+        >
+          <Text style={styles.buttonText}>Verify</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  content: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginTop: -50,
+  },
+  inputContainer: {
+    width: '100%',
+    marginBottom: 15,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    padding: 15,
+    fontSize: 14,
+    color: '#666666',
+    backgroundColor: '#FFFFFF',
+    width: '100%',
+  },
+  inputError: {
+    borderColor: '#FF0000',
+  },
+  errorText: {
+    color: '#FF0000',
+    fontSize: 12,
+    marginTop: 5,
+    marginLeft: 5,
+  },
+  button: {
+    backgroundColor: '#2B95E1',
+    padding: 15,
+    borderRadius: 8,
+    width: '100%',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  buttonDisabled: {
+    backgroundColor: '#B0BEC5',
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+});
+
+export default FirstResponderScreen; 
