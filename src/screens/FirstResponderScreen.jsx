@@ -53,12 +53,12 @@ const FirstResponderScreen = () => {
   };
 
   const handleWorkerIdChange = (text) => {
-    // Only allow numbers and limit to 4 digits
-    const cleaned = text.replace(/[^0-9]/g, '').slice(0, 4);
+    // Only allow numbers and limit to 6 digits
+    const cleaned = text.replace(/[^0-9]/g, '').slice(0, 6);
     setWorkerId(cleaned);
     
-    if (cleaned.length > 0 && cleaned.length !== 4) {
-      setWorkerIdError('Worker ID must be 4 digits');
+    if (cleaned.length > 0 && cleaned.length !== 6) {
+      setWorkerIdError('Worker ID must be 6 digits');
     } else {
       setWorkerIdError('');
     }
@@ -77,12 +77,21 @@ const FirstResponderScreen = () => {
       return;
     }
 
-    if (workerId.length !== 4) {
-      setWorkerIdError('Worker ID must be 4 digits');
+    if (workerId.length !== 6) {
+      setWorkerIdError('Worker ID must be 6 digits');
       return;
     }
 
     Alert.alert('Success', 'Verification successful!');
+  };
+
+  const isFormComplete = () => {
+    const cleanedCNIC = cnic.replace(/-/g, '');
+    return cleanedCNIC.length === 13 && workerId.length === 6;
+  };
+
+  const handleTrainingModules = () => {
+    navigation.navigate('TrainingModules'); // You'll need to create this screen
   };
 
   return (
@@ -102,7 +111,7 @@ const FirstResponderScreen = () => {
             placeholder="CNIC (XXXXX-XXXXXXX-X)"
             placeholderTextColor="#999"
             keyboardType="numeric"
-            maxLength={15} // 13 digits + 2 hyphens
+            maxLength={15}
           />
           {cnicError ? <Text style={styles.errorText}>{cnicError}</Text> : null}
         </View>
@@ -112,23 +121,27 @@ const FirstResponderScreen = () => {
             style={[styles.input, workerIdError ? styles.inputError : null]}
             value={workerId}
             onChangeText={handleWorkerIdChange}
-            placeholder="Worker ID (4 digits)"
+            placeholder="Worker ID (6 digits)"
             placeholderTextColor="#999"
             keyboardType="numeric"
-            maxLength={4}
+            maxLength={6}
           />
           {workerIdError ? <Text style={styles.errorText}>{workerIdError}</Text> : null}
         </View>
 
         <TouchableOpacity 
-          style={[
-            styles.button, 
-            (!cnic || !workerId || cnicError || workerIdError) && styles.buttonDisabled
-          ]}
+          style={[styles.button, !isFormComplete() && styles.buttonDisabled]}
           onPress={handleVerify}
-          disabled={!cnic || !workerId || cnicError || workerIdError}
+          disabled={!isFormComplete()}
         >
           <Text style={styles.buttonText}>Verify</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.trainingButton}
+          onPress={handleTrainingModules}
+        >
+          <Text style={styles.trainingButtonText}>Access Training Modules</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -178,6 +191,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#B0BEC5',
   },
   buttonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  trainingButton: {
+    backgroundColor: '#4CAF50', // Different color to distinguish from verify button
+    padding: 15,
+    borderRadius: 8,
+    width: '100%',
+    alignItems: 'center',
+    marginTop: 20, // Space between verify and training buttons
+    borderWidth: 1,
+    borderColor: '#45A049',
+  },
+  trainingButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
