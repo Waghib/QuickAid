@@ -24,6 +24,10 @@ const FirstResponderScreen = () => {
   const [cnicError, setCnicError] = useState('');
   const [workerIdError, setWorkerIdError] = useState('');
 
+  const handleBack = () => {
+    navigation.goBack();
+  };
+
   const formatCNIC = (text) => {
     // Remove any non-numeric characters
     const cleaned = text.replace(/[^0-9]/g, '');
@@ -99,6 +103,12 @@ const FirstResponderScreen = () => {
       <StatusBar backgroundColor="#2B95E1" barStyle="light-content" />
       
       <View style={[authStyles.topSection, dynamicStyles.topSection]}>
+        <TouchableOpacity 
+          style={authStyles.backButton} 
+          onPress={handleBack}
+        >
+          <Text style={authStyles.backArrow}>{"❮"}</Text>
+        </TouchableOpacity>
         <AuthLogo dynamicStyles={dynamicStyles} />
       </View>
 
@@ -196,12 +206,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   trainingButton: {
-    backgroundColor: '#4CAF50', // Different color to distinguish from verify button
+    backgroundColor: '#4CAF50',
     padding: 15,
     borderRadius: 8,
     width: '100%',
     alignItems: 'center',
-    marginTop: 20, // Space between verify and training buttons
+    marginTop: 20,
     borderWidth: 1,
     borderColor: '#45A049',
   },
