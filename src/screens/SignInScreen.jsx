@@ -101,7 +101,8 @@ const SignInScreen = () => {
         // If user exists, proceed to OTP verification
         navigation.navigate('OTPVerification', { 
           phoneNumber: fullPhoneNumber,
-          name: userDoc.data().name // Pass the user's name from Firestore
+          name: userDoc.data().name, // Pass the user's name from Firestore
+          isSignUp: false
         });
 
       } catch (error) {

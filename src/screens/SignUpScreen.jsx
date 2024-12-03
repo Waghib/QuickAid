@@ -135,7 +135,8 @@ const SignUpScreen = () => {
                   onPress: () => {
                     navigation.navigate('OTPVerification', { 
                       phoneNumber: fullPhoneNumber,
-                      name: name
+                      name: name,
+                      isSignUp: true
                     });
                   }
                 }
