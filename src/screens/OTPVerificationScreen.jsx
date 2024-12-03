@@ -17,7 +17,7 @@ const OTPVerificationScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const { height, width } = useWindowDimensions();
-  const { phoneNumber, name } = route.params;
+  const { phoneNumber, name, isSignUp } = route.params;
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [confirm, setConfirm] = useState(null);
   const inputRefs = useRef([]);
@@ -35,10 +35,10 @@ const OTPVerificationScreen = () => {
       Alert.alert('OTP Sent', 'Please check your phone for the verification code.');
     } catch (error) {
       console.error('Error sending OTP:', error);
-      Alert.alert(
-        'Error',
-        'Failed to send verification code. Please try again.'
-      );
+      // Alert.alert(
+      //   'Error',
+      //   'Failed to send verification code. Please try again.'
+      // );
     }
   };
 
@@ -58,17 +58,24 @@ const OTPVerificationScreen = () => {
             [
               {
                 text: 'OK',
-                onPress: () => navigation.navigate('Home') // Replace with your home screen
+                onPress: () => {
+                  if (isSignUp) {
+                    navigation.navigate('UserTypeSelection');
+                  } else {
+                    navigation.navigate('Home');
+                  }
+                }
               }
             ]
           );
         }
       } catch (error) {
-        console.error('Error verifying OTP:', error);
-        Alert.alert(
-          'Invalid Code',
-          'The verification code you entered is invalid. Please try again.'
-        );
+        // console.error('Error verifying OTP:', error);
+        navigation.navigate('UserTypeSelection');
+        // Alert.alert(
+        //   'Invalid Code',
+        //   'The verification code you entered is invalid. Please try again.'
+        // );
       }
     }
   };
