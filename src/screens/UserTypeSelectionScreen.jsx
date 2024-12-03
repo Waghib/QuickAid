@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, StatusBar } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, StatusBar, useWindowDimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { authStyles } from '../styles/authStyles';
 import { getDynamicStyles } from '../styles/dynamicStyles';
@@ -45,11 +45,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
+    marginTop: -50,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 20,
+    marginBottom: 30,
+    color: '#333',
   },
   button: {
     backgroundColor: '#2B95E1',
