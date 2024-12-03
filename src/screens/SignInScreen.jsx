@@ -12,6 +12,7 @@ import { useNavigation } from '@react-navigation/native';
 import firestore from '@react-native-firebase/firestore';
 import { authStyles } from '../styles/authStyles';
 import { getDynamicStyles } from '../styles/dynamicStyles';
+import { AuthLogo, AuthInput, AuthButton } from '../components/authComponents';
 
 const SignInScreen = () => {
   const navigation = useNavigation();
@@ -127,15 +128,7 @@ const SignInScreen = () => {
       <StatusBar backgroundColor="#2B95E1" barStyle="light-content" />
       
       <View style={[authStyles.topSection, dynamicStyles.topSection]}>
-        <View style={authStyles.logoContainer}>
-          <Text style={[authStyles.logoText, dynamicStyles.logoText]}>
-            <Text style={authStyles.quickText}>QUICK</Text>
-            <Text style={authStyles.quickText}>AID</Text>
-          </Text>
-          <Text style={[authStyles.tagline, dynamicStyles.tagline]}>
-            Your Health Companion
-          </Text>
-        </View>
+        <AuthLogo dynamicStyles={dynamicStyles} />
       </View>
 
       <View style={[authStyles.toggleContainer, dynamicStyles.toggleContainer]}>
