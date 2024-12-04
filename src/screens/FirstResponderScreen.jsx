@@ -95,7 +95,7 @@ const FirstResponderScreen = () => {
   };
 
   const handleTrainingModules = () => {
-    navigation.navigate('TrainingModules'); // You'll need to create this screen
+    navigation.navigate('Training'); // You'll need to create this screen
   };
 
   return (
