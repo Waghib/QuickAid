@@ -6,4 +6,5 @@ export type RootStackParamList = {
   EmergencyUser: undefined;
   FirstResponder: undefined;
   Home: undefined;
+  Training: undefined;
 };
