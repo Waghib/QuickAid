@@ -6,6 +6,7 @@ import SignUpScreen from './src/screens/SignUpScreen';
 import OTPVerificationScreen from './src/screens/OTPVerificationScreen';
 import UserTypeSelectionScreen from './src/screens/UserTypeSelectionScreen';
 import FirstResponderScreen from './src/screens/FirstResponderScreen';
+import Home from './src/screens/Home';
 import { RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -24,6 +25,7 @@ const App: React.FC = () => {
         <Stack.Screen name="OTPVerification" component={OTPVerificationScreen} />
         <Stack.Screen name="UserTypeSelection" component={UserTypeSelectionScreen} />
         <Stack.Screen name="FirstResponder" component={FirstResponderScreen} />
+        <Stack.Screen name="Home" component={Home} />
       </Stack.Navigator>
     </NavigationContainer>
   );
