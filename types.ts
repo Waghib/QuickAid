@@ -5,4 +5,5 @@ export type RootStackParamList = {
   UserTypeSelection: undefined;
   EmergencyUser: undefined;
   FirstResponder: undefined;
+  Home: undefined;
 };
