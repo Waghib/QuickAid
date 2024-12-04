@@ -11,7 +11,7 @@ const UserTypeSelectionScreen = () => {
   const dynamicStyles = getDynamicStyles(width, height);
 
   const handleEmergencyUser = () => {
-    navigation.navigate('EmergencyUser');
+    navigation.navigate('Home');
   };
 
   const handleFirstResponder = () => {
