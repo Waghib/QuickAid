@@ -23,6 +23,13 @@ const Home = () => {
     }, 300);
   };
 
+  const handleAccount = () => {
+    setIsMenuVisible(false);
+    setTimeout(() => {
+      navigation.navigate('AccountScreen');
+    }, 300);
+  };
+
   const getFontSize = (size) => (width * size) / 430;
   const getVerticalSpacing = (size) => (height * size) / 900;
 
@@ -57,7 +64,10 @@ const Home = () => {
             <View style={styles.menuHeader}>
               <Text style={styles.menuHeaderText}>Menu</Text>
             </View>
-            <TouchableOpacity style={styles.menuItem}>
+            <TouchableOpacity 
+              style={styles.menuItem}
+              onPress={handleAccount}
+            >
               <Text style={styles.menuItemText}>Account</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.menuItem}>

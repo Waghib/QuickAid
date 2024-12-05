@@ -23,6 +23,13 @@ const ResponderHome = () => {
     }, 300);
   };
 
+  const handleAccount = () => {
+    setIsMenuVisible(false);
+    setTimeout(() => {
+      navigation.navigate('AccountScreen');
+    }, 300);
+  };
+
   const getFontSize = (size) => (width * size) / 430;
   const getVerticalSpacing = (size) => (height * size) / 900;
 
