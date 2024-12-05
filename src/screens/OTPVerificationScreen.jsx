@@ -95,11 +95,17 @@ const OTPVerificationScreen = () => {
   const handleKeyPress = (e, index) => {
     if (e.nativeEvent.key === 'Backspace') {
       const newOtp = [...otp];
+      
+      // Clear current block
       newOtp[index] = '';
       setOtp(newOtp);
       
+      // Move to previous block if not at first block
       if (index > 0) {
         inputRefs.current[index - 1].focus();
+        // Clear the previous block too
+        newOtp[index - 1] = '';
+        setOtp(newOtp);
       }
     }
   };
