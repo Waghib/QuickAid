@@ -26,7 +26,7 @@ const ResponderHome = () => {
   const handleAccount = () => {
     setIsMenuVisible(false);
     setTimeout(() => {
-      navigation.navigate('AccountScreen');
+      navigation.navigate('ResponderAccount');
     }, 300);
   };
 
@@ -64,7 +64,10 @@ const ResponderHome = () => {
             <View style={styles.menuHeader}>
               <Text style={styles.menuHeaderText}>Menu</Text>
             </View>
-            <TouchableOpacity style={styles.menuItem}>
+            <TouchableOpacity 
+              style={styles.menuItem}
+              onPress={handleAccount}
+            >
               <Text style={styles.menuItemText}>Account</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.menuItem}>

@@ -9,4 +9,5 @@ export type RootStackParamList = {
   Training: undefined;
   ResponderHome: undefined;
   AccountScreen: undefined;
+  ResponderAccount: undefined;
 };
