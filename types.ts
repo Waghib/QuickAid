@@ -7,4 +7,5 @@ export type RootStackParamList = {
   FirstResponder: undefined;
   Home: undefined;
   Training: undefined;
+  ResponderHome: undefined;
 };

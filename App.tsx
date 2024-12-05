@@ -8,6 +8,7 @@ import UserTypeSelectionScreen from './src/screens/UserTypeSelectionScreen';
 import FirstResponderScreen from './src/screens/FirstResponderScreen';
 import Home from './src/screens/Home';
 import Training from './src/screens/Training';
+import ResponderHome from './src/screens/ResponderHome';
 import { RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -28,6 +29,7 @@ const App: React.FC = () => {
         <Stack.Screen name="FirstResponder" component={FirstResponderScreen} />
         <Stack.Screen name="Home" component={Home} />
         <Stack.Screen name="Training" component={Training} />
+        <Stack.Screen name="ResponderHome" component={ResponderHome} />
       </Stack.Navigator>
     </NavigationContainer>
   );

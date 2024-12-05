@@ -87,6 +87,7 @@ const FirstResponderScreen = () => {
     }
 
     Alert.alert('Success', 'Verification successful!');
+    navigation.navigate('ResponderHome');
   };
 
   const isFormComplete = () => {
