@@ -70,7 +70,10 @@ const ResponderHome = () => {
             >
               <Text style={styles.menuItemText}>Account</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.menuItem}>
+            <TouchableOpacity 
+              style={styles.menuItem}
+              onPress={() => navigation.navigate('Settings')}
+            >
               <Text style={styles.menuItemText}>Settings</Text>
             </TouchableOpacity>
             <TouchableOpacity 

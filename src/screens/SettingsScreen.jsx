@@ -27,10 +27,6 @@ const SettingsScreen = () => {
     navigation.navigate(option.replace(/\s+/g, ''));
   };
 
-  const handleLogout = () => {
-    navigation.replace('SignIn');
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       {/* Account Section */}
@@ -89,13 +85,6 @@ const SettingsScreen = () => {
           ))}
       </View>
 
-      {/* Logout Button */}
-      <TouchableOpacity 
-        style={styles.logoutButton}
-        onPress={handleLogout}
-      >
-        <Text style={styles.logoutText}>Log out</Text>
-      </TouchableOpacity>
     </SafeAreaView>
   );
 };
@@ -181,30 +170,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     color: '#333',
-  },
-  logoutButton: {
-    margin: 16,
-    padding: 16,
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    position: 'absolute',
-    bottom: 50,
-    left: 0,
-    right: 0,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  logoutText: {
-    color: '#FF0000',
-    fontSize: 16,
-    fontWeight: '600',
   },
   backButton: {
     fontSize: 30,
