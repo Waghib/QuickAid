@@ -11,6 +11,7 @@ import {
   PermissionsAndroid,
   Alert,
   Animated,
+  Linking,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import MapView, { PROVIDER_GOOGLE, Marker } from 'react-native-maps';
@@ -265,7 +266,7 @@ const ResponderHome = () => {
       marginBottom: height * 0.02,
     },
     buttonText: {
-      fontSize: Math.min(width, height) * 0.02,
+      fontSize: Math.min(width, height) * 0.025,
     },
   };
 
