@@ -30,15 +30,17 @@ const OTPVerificationScreen = () => {
 
   const signInWithPhoneNumber = async () => {
     try {
+      Alert.alert('OTP Sent', 'Please check your phone for the verification code.');
       const confirmation = await auth().signInWithPhoneNumber(phoneNumber);
       setConfirm(confirmation);
-      Alert.alert('OTP Sent', 'Please check your phone for the verification code.');
     } catch (error) {
       console.error('Error sending OTP:', error);
-      // Alert.alert(
-      //   'Error',
-      //   'Failed to send verification code. Please try again.'
-      // );
+      if (!isSignUp) {
+        Alert.alert(
+          'Error',
+          'Failed to send verification code. Please try again.'
+        );
+      }
     }
   };
 
@@ -70,12 +72,16 @@ const OTPVerificationScreen = () => {
           );
         }
       } catch (error) {
-        // console.error('Error verifying OTP:', error);
-        navigation.navigate('UserTypeSelection');
-        // Alert.alert(
-        //   'Invalid Code',
-        //   'The verification code you entered is invalid. Please try again.'
-        // );
+        console.error('Error verifying OTP:', error);
+        if (isSignUp) {
+          navigation.navigate('UserTypeSelection');
+        } else {
+          Alert.alert(
+            'Invalid Code',
+            'The verification code you entered is invalid. Please try again.'
+          );
+        }
+
       }
     }
   };
