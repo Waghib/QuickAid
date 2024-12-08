@@ -13,6 +13,8 @@ import { useNavigation } from '@react-navigation/native';
 import { authStyles } from '../styles/authStyles';
 import { getDynamicStyles } from '../styles/dynamicStyles';
 import { AuthLogo } from '../components/authComponents';
+import firestore from '@react-native-firebase/firestore';
+import auth from '@react-native-firebase/auth';
 
 const FirstResponderScreen = () => {
   const navigation = useNavigation();
@@ -68,7 +70,7 @@ const FirstResponderScreen = () => {
     }
   };
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     // Validate both fields before proceeding
     if (!cnic || !workerId) {
       Alert.alert('Error', 'Please fill in all fields.');
@@ -86,8 +88,42 @@ const FirstResponderScreen = () => {
       return;
     }
 
-    Alert.alert('Success', 'Verification successful!');
-    navigation.navigate('ResponderHome');
+    try {
+      const currentUser = auth().currentUser;
+      
+      if (!currentUser) {
+        Alert.alert('Error', 'User not authenticated');
+        return;
+      }
+
+      // Update user document in Firestore
+      await firestore()
+        .collection('users')
+        .doc(currentUser.phoneNumber)
+        .update({
+          role: 'responder',
+          cnic: cnic,
+          workerId: workerId,
+          updatedAt: firestore.FieldValue.serverTimestamp()
+        });
+
+      Alert.alert(
+        'Success', 
+        'Verification successful!',
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.navigate('ResponderHome')
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('Error updating user data:', error);
+      Alert.alert(
+        'Error',
+        'Failed to verify. Please try again later.'
+      );
+    }
   };
 
   const isFormComplete = () => {
