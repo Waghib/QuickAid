@@ -73,15 +73,7 @@ const OTPVerificationScreen = () => {
         }
       } catch (error) {
         console.error('Error verifying OTP:', error);
-        if (isSignUp) {
-          navigation.navigate('UserTypeSelection');
-        } else {
-          Alert.alert(
-            'Invalid Code',
-            'The verification code you entered is invalid. Please try again.'
-          );
-        }
-
+        Alert.alert('Error', 'Failed to verify OTP. Please try again.');
       }
     }
   };
