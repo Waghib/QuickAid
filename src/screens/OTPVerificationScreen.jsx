@@ -12,6 +12,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import auth from '@react-native-firebase/auth';
 import { authStyles } from '../styles/authStyles';
 import { getDynamicStyles } from '../styles/dynamicStyles';
+import firestore from '@react-native-firebase/firestore';
 
 const OTPVerificationScreen = () => {
   const route = useRoute();
@@ -54,26 +55,61 @@ const OTPVerificationScreen = () => {
       try {
         const credential = await confirm.confirm(otpString);
         if (credential) {
-          Alert.alert(
-            'Success',
-            'Phone number verified successfully!',
-            [
-              {
-                text: 'OK',
-                onPress: () => {
-                  if (isSignUp) {
-                    navigation.navigate('UserTypeSelection');
-                  } else {
-                    navigation.navigate('Home');
+          // Check user role in Firestore if not signing up
+          if (!isSignUp) {
+            const userDoc = await firestore()
+              .collection('users')
+              .doc(phoneNumber)
+              .get();
+
+            if (userDoc.exists) {
+              const userData = userDoc.data();
+              Alert.alert(
+                'Success',
+                'Phone number verified successfully!',
+                [
+                  {
+                    text: 'OK',
+                    onPress: () => {
+                      if (userData.role === 'responder') {
+                        navigation.navigate('ResponderHome');
+                      } else if (userData.role === 'emergency') {
+                        navigation.navigate('Home');
+                      } else {
+                        // If role is not set, send to UserTypeSelection
+                        navigation.navigate('UserTypeSelection');
+                      }
+                    }
                   }
+                ]
+              );
+            }
+          } else {
+            // For new sign ups, always go to UserTypeSelection
+            Alert.alert(
+              'Success',
+              'Phone number verified successfully!',
+              [
+                {
+                  text: 'OK',
+                  onPress: () => navigation.navigate('UserTypeSelection')
                 }
-              }
-            ]
-          );
+              ]
+            );
+          }
         }
       } catch (error) {
         console.error('Error verifying OTP:', error);
-        Alert.alert('Error', 'Failed to verify OTP. Please try again.');
+        Alert.alert(
+          'Invalid Code',
+          'The verification code you entered is invalid. Please try again.',
+          [
+            {
+              text: 'OK',
+              // onPress: () => navigation.navigate('SignIn')
+            }
+          ]
+        );
       }
     }
   };
