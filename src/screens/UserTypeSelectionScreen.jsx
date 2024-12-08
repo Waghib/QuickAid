@@ -1,17 +1,43 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, StatusBar, useWindowDimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, StatusBar, useWindowDimensions, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { authStyles } from '../styles/authStyles';
 import { getDynamicStyles } from '../styles/dynamicStyles';
 import { AuthLogo } from '../components/authComponents';
+import auth from '@react-native-firebase/auth';
+import firestore from '@react-native-firebase/firestore';
 
 const UserTypeSelectionScreen = () => {
   const navigation = useNavigation();
   const { height, width } = useWindowDimensions();
   const dynamicStyles = getDynamicStyles(width, height);
 
-  const handleEmergencyUser = () => {
-    navigation.navigate('Home');
+  const handleEmergencyUser = async () => {
+    try {
+      const currentUser = auth().currentUser;
+      
+      if (!currentUser) {
+        Alert.alert('Error', 'User not authenticated');
+        return;
+      }
+
+      // Update user document with emergency role
+      await firestore()
+        .collection('users')
+        .doc(currentUser.phoneNumber)
+        .update({
+          role: 'emergency',
+          updatedAt: firestore.FieldValue.serverTimestamp()
+        });
+
+      navigation.navigate('Home');
+    } catch (error) {
+      console.error('Error updating user role:', error);
+      Alert.alert(
+        'Error',
+        'Failed to set user type. Please try again.'
+      );
+    }
   };
 
   const handleFirstResponder = () => {
@@ -28,10 +54,16 @@ const UserTypeSelectionScreen = () => {
 
       <View style={styles.content}>
         <Text style={styles.title}>Select User Type</Text>
-        <TouchableOpacity style={styles.button} onPress={handleEmergencyUser}>
+        <TouchableOpacity 
+          style={styles.button} 
+          onPress={handleEmergencyUser}
+        >
           <Text style={styles.buttonText}>Emergency User</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={handleFirstResponder}>
+        <TouchableOpacity 
+          style={styles.button} 
+          onPress={handleFirstResponder}
+        >
           <Text style={styles.buttonText}>First Responder</Text>
         </TouchableOpacity>
       </View>
