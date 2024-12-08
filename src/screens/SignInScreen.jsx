@@ -97,12 +97,10 @@ const SignInScreen = () => {
             lastLogin: firestore.FieldValue.serverTimestamp()
           });
 
-        console.log('User signed in successfully');
-
-        // If user exists, proceed to OTP verification
+        // Navigate to OTP verification with user data
         navigation.navigate('OTPVerification', { 
           phoneNumber: fullPhoneNumber,
-          name: userDoc.data().name, // Pass the user's name from Firestore
+          name: userDoc.data().name,
           isSignUp: false
         });
 
