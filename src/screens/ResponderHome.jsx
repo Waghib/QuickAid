@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,6 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import MapView, { PROVIDER_GOOGLE, Marker } from 'react-native-maps';
 import Geolocation from '@react-native-community/geolocation';
-import { useRef } from 'react';
 
 // Separate Menu component
 const SideMenu = ({ visible, onClose, onTraining, onAccount }) => {
@@ -107,7 +106,7 @@ const SideMenu = ({ visible, onClose, onTraining, onAccount }) => {
   );
 };
 
-const Home = () => {
+const ResponderHome = () => {
   const navigation = useNavigation();
   const { height, width } = useWindowDimensions();
   const [isMenuVisible, setIsMenuVisible] = useState(false);
@@ -247,20 +246,43 @@ const Home = () => {
     }, 300);
   };
 
+  // Calculate dynamic styles based on screen dimensions
+  const dynamicStyles = {
+    header: {
+      paddingVertical: height * 0.02,
+      paddingHorizontal: width * 0.04,
+    },
+    menuIcon: {
+      fontSize: Math.min(width, height) * 0.06,
+    },
+    mapContainer: {
+      height: height * 0.75,
+    },
+    bottomButton: {
+      paddingVertical: height * 0.02,
+      paddingHorizontal: width * 0.04,
+      marginHorizontal: width * 0.05,
+      marginBottom: height * 0.02,
+    },
+    buttonText: {
+      fontSize: Math.min(width, height) * 0.02,
+    },
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar backgroundColor="#2B95E1" barStyle="light-content" />
       
-      <View style={styles.header}>
+      <View style={[styles.header, dynamicStyles.header]}>
         <TouchableOpacity 
           style={styles.menuButton}
           onPress={() => setIsMenuVisible(true)}
         >
-          <Text style={styles.menuIcon}>☰</Text>
+          <Text style={[styles.menuIcon, dynamicStyles.menuIcon]}>☰</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={[styles.mapContainer, { height: height * 0.75 }]}>
+      <View style={[styles.mapContainer, dynamicStyles.mapContainer]}>
         <MapView
           style={styles.map}
           provider={PROVIDER_GOOGLE}
@@ -295,7 +317,7 @@ const Home = () => {
         
         {locationError && (
           <TouchableOpacity 
-            style={styles.retryButton}
+            style={[styles.retryButton, { top: height * 0.02 }]}
             onPress={getCurrentLocation}
           >
             <Text style={styles.retryText}>Retry Getting Location</Text>
@@ -305,9 +327,9 @@ const Home = () => {
 
       <View style={styles.bottomContainer}>
         <TouchableOpacity 
-          style={[styles.helpButton, { padding: width * 0.04, marginHorizontal: width * 0.05 }]}
+          style={[styles.statusButton, dynamicStyles.bottomButton]}
         >
-          <Text style={[styles.helpButtonText, { fontSize: (width * 16) / 430 }]}>
+          <Text style={[styles.statusButtonText, dynamicStyles.buttonText]}>
             View Requests
           </Text>
         </TouchableOpacity>
@@ -330,7 +352,6 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#2B95E1',
-    padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -338,7 +359,6 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   menuIcon: {
-    fontSize: 24,
     color: '#FFFFFF',
   },
   mapContainer: {
@@ -360,13 +380,13 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
     paddingVertical: 20,
   },
-  helpButton: {
+  statusButton: {
     backgroundColor: '#2B95E1',
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  helpButtonText: {
+  statusButtonText: {
     color: '#FFFFFF',
     fontWeight: '600',
   },
@@ -414,7 +434,6 @@ const styles = StyleSheet.create({
   },
   retryButton: {
     position: 'absolute',
-    top: 10,
     alignSelf: 'center',
     backgroundColor: '#2B95E1',
     padding: 10,
@@ -426,4 +445,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Home; 
+export default ResponderHome; 
