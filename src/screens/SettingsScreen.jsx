@@ -6,10 +6,11 @@ import {
   TouchableOpacity,
   Image,
   SafeAreaView,
+  Dimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../types';
+
+const { width, height } = Dimensions.get('window');
 
 const SettingsScreen = () => {
   const navigation = useNavigation();
@@ -31,8 +32,11 @@ const SettingsScreen = () => {
     <SafeAreaView style={styles.container}>
       {/* Account Section */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backButton}>←</Text>
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Text style={styles.backArrow}>{"❮"}</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Settings</Text>
       </View>
@@ -92,27 +96,27 @@ const SettingsScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5', // Light gray background
+    backgroundColor: '#f5f5f5',
   },
   header: {
+    backgroundColor: '#2B95E1',
+    padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#2196F3',
+    elevation: 4,
   },
   headerTitle: {
-    fontSize: 20,
+    color: '#FFFFFF',
+    fontSize: width * 0.06,
     fontWeight: 'bold',
-    color: '#fff',
-    marginLeft: 16,
   },
   profileSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 20,
+    padding: width * 0.05,
     backgroundColor: '#fff',
-    marginVertical: 10,
-    marginHorizontal: 16,
+    marginVertical: height * 0.01,
+    marginHorizontal: width * 0.04,
     borderRadius: 12,
     shadowColor: '#000',
     shadowOffset: {
@@ -124,29 +128,29 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   profileImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: width * 0.12,
+    height: width * 0.12,
+    borderRadius: width * 0.06,
   },
   profileInfo: {
     flex: 1,
     marginLeft: 16,
   },
   profileName: {
-    fontSize: 18,
+    fontSize: width * 0.045,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 4,
   },
   memberStatus: {
-    fontSize: 14,
+    fontSize: width * 0.035,
     color: '#666',
     fontWeight: '500',
   },
   optionsContainer: {
     backgroundColor: '#fff',
     borderRadius: 12,
-    marginHorizontal: 16,
+    marginHorizontal: width * 0.04,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -155,29 +159,32 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-    marginTop: 16,
+    marginTop: height * 0.02,
   },
   optionItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 16,
+    paddingVertical: height * 0.015,
+    paddingHorizontal: width * 0.04,
     borderBottomWidth: 0.5,
     borderBottomColor: '#E0E0E0',
     backgroundColor: '#fff',
   },
   optionText: {
     flex: 1,
-    fontSize: 16,
+    fontSize: width * 0.04,
     color: '#333',
   },
   backButton: {
-    fontSize: 30,
-    color: 'white',
-    paddingHorizontal: 8,
+    padding: 8,
+    marginRight: 16,
+  },
+  backArrow: {
+    fontSize: 24,
+    color: '#FFFFFF',
   },
   rightArrow: {
-    fontSize: 30,
+    fontSize: width * 0.07,
     color: '#666',
     paddingHorizontal: 8,
   },
