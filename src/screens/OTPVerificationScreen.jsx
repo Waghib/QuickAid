@@ -180,15 +180,25 @@ const OTPVerificationScreen = () => {
           <TextInput
             key={index}
             ref={(ref) => (inputRefs.current[index] = ref)}
-            style={[authStyles.otpInput, dynamicStyles.otpInput]}
+            style={[
+              authStyles.otpInput, 
+              dynamicStyles.otpInput,
+              {
+                textAlign: 'center',
+                textAlignVertical: 'center',
+                includeFontPadding: false,
+                padding: 0,
+                lineHeight: undefined
+              }
+            ]}
             value={digit}
             onChangeText={(text) => handleOtpChange(text, index)}
             onKeyPress={(e) => handleKeyPress(e, index)}
             keyboardType="numeric"
             maxLength={1}
-            textAlign="center"
-            textAlignVertical="center"
-            includeFontPadding={false}
+            editable={true}
+            selectTextOnFocus={true}
+            caretHidden={true}
           />
         ))}
       </View>
