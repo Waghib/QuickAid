@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,19 +7,55 @@ import {
   StatusBar,
   useWindowDimensions,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { authStyles } from '../styles/authStyles';
+import auth from '@react-native-firebase/auth';
+import firestore from '@react-native-firebase/firestore';
 
 const AccountScreen = () => {
   const navigation = useNavigation();
   const { width, height } = useWindowDimensions();
+  const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const handleLogout = () => {
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'SignUp' }],
-    });
+  useEffect(() => {
+    fetchUserData();
+  }, []);
+
+  const fetchUserData = async () => {
+    try {
+      const currentUser = auth().currentUser;
+      if (currentUser) {
+        const userDoc = await firestore()
+          .collection('users')
+          .doc(currentUser.phoneNumber)
+          .get();
+
+        if (userDoc.exists) {
+          setUserData(userDoc.data());
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      Alert.alert('Error', 'Failed to load user data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await auth().signOut();
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'SignUp' }],
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+      Alert.alert('Error', 'Failed to logout');
+    }
   };
 
   const getFontSize = (size) => (width * size) / 430;
@@ -48,6 +84,14 @@ const AccountScreen = () => {
     </View>
   );
 
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <ActivityIndicator size="large" color="#2B95E1" />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <StatusBar backgroundColor="#2B95E1" barStyle="light-content" />
@@ -63,8 +107,8 @@ const AccountScreen = () => {
       </View>
 
       <ScrollView style={styles.content}>
-        <AccountItem label="Name" value="Sarim khalil" />
-        <AccountItem label="Phone number" value="+923187791013" />
+        <AccountItem label="Name" value={userData?.name || 'N/A'} />
+        <AccountItem label="Phone number" value={userData?.phoneNumber || 'N/A'} />
         
         <TouchableOpacity 
           style={styles.logoutButton}
@@ -130,6 +174,10 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '600',
     fontSize: 16,
+  },
+  centerContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 
