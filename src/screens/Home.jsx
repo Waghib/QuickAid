@@ -14,8 +14,6 @@ import {
   Linking,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import MapView, { PROVIDER_GOOGLE, Marker } from 'react-native-maps';
-import Geolocation from '@react-native-community/geolocation';
 
 // Separate Menu component
 const SideMenu = ({ visible, onClose, onTraining, onAccount }) => {
@@ -117,121 +115,120 @@ const Home = () => {
     latitudeDelta: 0.0922,
     longitudeDelta: 0.0421,
   });
-  const [locationError, setLocationError] = useState(null);
+  // const [locationError, setLocationError] = useState(null);
 
-  const requestLocationPermission = async () => {
-    try {
-      if (Platform.OS === 'ios') {
-        const auth = await Geolocation.requestAuthorization('whenInUse');
-        if (auth === 'granted') {
-          getCurrentLocation();
-        }
-      } else {
-        const granted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-          {
-            title: "Location Permission",
-            message: "This app needs access to your location to show you on the map.",
-            buttonNeutral: "Ask Me Later",
-            buttonNegative: "Cancel",
-            buttonPositive: "OK"
-          }
-        );
-        if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-          getCurrentLocation();
-        } else {
-          setLocationError('Location permission denied');
-          Alert.alert('Permission Denied', 'Please enable location services to use this feature');
-        }
-      }
-    } catch (err) {
-      console.warn(err);
-      setLocationError('Error requesting location permission');
-    }
-  };
+  // const requestLocationPermission = async () => {
+  //   try {
+  //     if (Platform.OS === 'ios') {
+  //       const auth = await Geolocation.requestAuthorization('whenInUse');
+  //       if (auth === 'granted') {
+  //         getCurrentLocation();
+  //       }
+  //     } else {
+  //       const granted = await PermissionsAndroid.request(
+  //         PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+  //         {
+  //           title: "Location Permission",
+  //           message: "This app needs access to your location to show you on the map.",
+  //           buttonNeutral: "Ask Me Later",
+  //           buttonNegative: "Cancel",
+  //           buttonPositive: "OK"
+  //         }
+  //       );
+  //       if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+  //         getCurrentLocation();
+  //       } else {
+  //         setLocationError('Location permission denied');
+  //         Alert.alert('Permission Denied', 'Please enable location services to use this feature');
+  //       }
+  //     }
+  //   } catch (err) {
+  //     console.warn(err);
+  //     setLocationError('Error requesting location permission');
+  //   }
+  // };
 
-  const getCurrentLocation = () => {
-    Geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        setUserLocation({
-          latitude,
-          longitude,
-          latitudeDelta: 0.0922,
-          longitudeDelta: 0.0421,
-        });
-        setLocationError(null);
-      },
-      (error) => {
-        console.log('Location error:', error);
-        setLocationError(error.message);
+  // const getCurrentLocation = () => {
+  //   Geolocation.getCurrentPosition(
+  //     (position) => {
+  //       const { latitude, longitude } = position.coords;
+  //       setUserLocation({
+  //         latitude,
+  //         longitude,
+  //         latitudeDelta: 0.0922,
+  //         longitudeDelta: 0.0421,
+  //       });
+  //       setLocationError(null);
+  //     },
+  //     (error) => {
+  //       console.log('Location error:', error);
+  //       setLocationError(error.message);
         
-        // Check if location services are enabled
-        if (error.code === error.POSITION_UNAVAILABLE) {
-          Alert.alert(
-            'Location Services Disabled',
-            'Please enable location services in your device settings.',
-            [
-              {
-                text: 'Open Settings',
-                onPress: () => {
-                  if (Platform.OS === 'ios') {
-                    Linking.openURL('app-settings:');
-                  } else {
-                    Linking.openSettings();
-                  }
-                }
-              },
-              {
-                text: 'Cancel',
-                style: 'cancel'
-              }
-            ]
-          );
-        }
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 20000,
-        maximumAge: 1000,
-        distanceFilter: 10
-      }
-    );
-  };
+  //       // Check if location services are enabled
+  //       if (error.code === error.POSITION_UNAVAILABLE) {
+  //         Alert.alert(
+  //           'Location Services Disabled',
+  //           'Please enable location services in your device settings.',
+  //           [
+  //             {
+  //               text: 'Open Settings',
+  //               onPress: () => {
+  //                 if (Platform.OS === 'ios') {
+  //                   Linking.openURL('app-settings:');
+  //                 } else {
+  //                   Linking.openSettings();
+  //                 }
+  //               }
+  //             },
+  //             {
+  //               text: 'Cancel',
+  //               style: 'cancel'
+  //             }
+  //           ]
+  //         );
+  //       }
+  //     },
+  //     {
+  //       enableHighAccuracy: true,
+  //       timeout: 20000,
+  //       maximumAge: 1000,
+  //       distanceFilter: 10
+  //     }
+  //   );
+  // };
 
-  // Watch position for real-time updates
-  useEffect(() => {
-    const watchId = Geolocation.watchPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        setUserLocation({
-          latitude,
-          longitude,
-          latitudeDelta: 0.0922,
-          longitudeDelta: 0.0421,
-        });
-        setLocationError(null);
-      },
-      (error) => {
-        console.log('Watch position error:', error);
-        setLocationError(error.message);
-      },
-      {
-        enableHighAccuracy: true,
-        distanceFilter: 10,
-        interval: 5000,
-        fastestInterval: 2000
-      }
-    );
+  // useEffect(() => {
+  //   const watchId = Geolocation.watchPosition(
+  //     (position) => {
+  //       const { latitude, longitude } = position.coords;
+  //       setUserLocation({
+  //         latitude,
+  //         longitude,
+  //         latitudeDelta: 0.0922,
+  //         longitudeDelta: 0.0421,
+  //       });
+  //       setLocationError(null);
+  //     },
+  //     (error) => {
+  //       console.log('Watch position error:', error);
+  //       setLocationError(error.message);
+  //     },
+  //     {
+  //       enableHighAccuracy: true,
+  //       distanceFilter: 10,
+  //       interval: 5000,
+  //       fastestInterval: 2000
+  //     }
+  //   );
 
-    // Request permission when component mounts
-    requestLocationPermission();
+  //   // Request permission when component mounts
+  //   requestLocationPermission();
 
-    // Cleanup
-    return () => {
-      Geolocation.clearWatch(watchId);
-    };
-  }, []);
+  //   // Cleanup
+  //   return () => {
+  //     Geolocation.clearWatch(watchId);
+  //   };
+  // }, []);
 
   const handleTraining = () => {
     setIsMenuVisible(false);
@@ -290,7 +287,7 @@ const Home = () => {
       </View>
 
       <View style={[styles.mapContainer, dynamicStyles.mapContainer]}>
-        <MapView
+        {/* <MapView
           style={styles.map}
           provider={PROVIDER_GOOGLE}
           initialRegion={userLocation}
@@ -299,37 +296,16 @@ const Home = () => {
           showsMyLocationButton={true}
           followsUserLocation={true}
           onUserLocationChange={(event) => {
-            if (event.nativeEvent.coordinate) {
-              const { latitude, longitude } = event.nativeEvent.coordinate;
-              setUserLocation({
-                latitude,
-                longitude,
-                latitudeDelta: 0.0922,
-                longitudeDelta: 0.0421,
-              });
-            }
+            const { latitude, longitude } = event.nativeEvent.coordinate;
+            setUserLocation({
+              latitude,
+              longitude,
+              latitudeDelta: 0.0922,
+              longitudeDelta: 0.0421,
+            });
           }}
-        >
-          {!locationError && (
-            <Marker
-              coordinate={{
-                latitude: userLocation.latitude,
-                longitude: userLocation.longitude,
-              }}
-              title="You are here"
-              description="Your current location"
-            />
-          )}
-        </MapView>
-        
-        {locationError && (
-          <TouchableOpacity 
-            style={[styles.retryButton, { top: height * 0.02 }]}
-            onPress={getCurrentLocation}
-          >
-            <Text style={styles.retryText}>Retry Getting Location</Text>
-          </TouchableOpacity>
-        )}
+        /> */}
+        <Text style={styles.placeholderText}>Map functionality temporarily disabled</Text>
       </View>
 
       <View style={styles.bottomContainer}>
@@ -447,6 +423,12 @@ const styles = StyleSheet.create({
   retryText: {
     color: 'white',
     fontWeight: 'bold',
+  },
+  placeholderText: {
+    fontSize: 18,
+    color: '#333333',
+    textAlign: 'center',
+    padding: 20,
   },
 });
 
