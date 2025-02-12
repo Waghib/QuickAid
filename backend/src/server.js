@@ -9,13 +9,20 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Database
+// Database and Models
 const sequelize = require('./config/database');
+const models = require('./models');
 
-// Test DB Connection
+// Test DB Connection and Sync Models
 sequelize.authenticate()
-    .then(() => console.log('Database connected successfully'))
-    .catch(err => console.error('Unable to connect to the database:', err));
+    .then(() => {
+        console.log('Database connected successfully');
+        return sequelize.sync({ alter: true }); // In development, use alter: true to automatically update tables
+    })
+    .then(() => {
+        console.log('Database models synchronized successfully');
+    })
+    .catch(err => console.error('Database connection/sync error:', err));
 
 // Routes
 app.get('/', (req, res) => {
