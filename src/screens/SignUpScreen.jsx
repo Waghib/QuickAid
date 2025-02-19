@@ -95,84 +95,77 @@ const SignUpScreen = () => {
     const isPhoneValid = validatePhone(phoneNumber);
   
     if (isNameValid && isPhoneValid) {
-      const maxRetries = 3;
-      let retryCount = 0;
-
-      const attemptSignUp = async () => {
-        try {
-          // Remove hyphen before sending
-          const cleanNumber = phoneNumber.replace(/-/g, '');
-          const fullPhoneNumber = `+92${cleanNumber}`;
+      try {
+        // Remove hyphen before sending
+        const cleanNumber = phoneNumber.replace(/-/g, '');
+        const fullPhoneNumber = `+92${cleanNumber}`;
   
-          // Use firestore() to get the instance
-          const userDoc = await firestore()
-            .collection('users')
-            .doc(fullPhoneNumber)
-            .get();
+        // Check if user exists in Firebase
+        const userDoc = await firestore()
+          .collection('users')
+          .doc(fullPhoneNumber)
+          .get();
   
-          if (userDoc.exists) {
-            Alert.alert('Error', 'This phone number is already registered!');
-            return;
-          }
-  
-          // Use firestore() consistently
-          await firestore()
-            .collection('users')
-            .doc(fullPhoneNumber)
-            .set({
-              name: name,
-              phoneNumber: fullPhoneNumber,
-              createdAt: firestore.FieldValue.serverTimestamp(),
-              lastLogin: firestore.FieldValue.serverTimestamp()
-            });
-  
-            Alert.alert(
-              'Success', 
-              'Account created successfully!',
-              [
-                {
-                  text: 'OK',
-                  onPress: () => {
-                    navigation.navigate('OTPVerification', { 
-                      phoneNumber: fullPhoneNumber,
-                      name: name,
-                      isSignUp: true
-                    });
-                  }
-                }
-              ]
-            );
-  
-        } catch (error) {
-          console.error('Signup error:', error);
-          
-          if (error.code === 'firestore/unavailable' && retryCount < maxRetries) {
-            retryCount++;
-            const backoffDelay = Math.pow(2, retryCount) * 1000;
-            
-            console.log(`Retry attempt ${retryCount} of ${maxRetries}. Waiting ${backoffDelay/1000} seconds...`);
-            
-            return new Promise((resolve) => {
-              setTimeout(async () => {
-                try {
-                  resolve(await attemptSignUp());
-                } catch (retryError) {
-                  console.error('Retry failed:', retryError);
-                  resolve(null);
-                }
-              }, backoffDelay);
-            });
-          }
-
-          Alert.alert(
-            'Error',
-            'Unable to connect to the server. Please check your internet connection and try again later.'
-          );
-          return null;
+        if (userDoc.exists) {
+          Alert.alert('Error', 'This phone number is already registered!');
+          return;
         }
-      };
-
-      await attemptSignUp();
+  
+        // Create user in Firebase
+        await firestore()
+          .collection('users')
+          .doc(fullPhoneNumber)
+          .set({
+            name: name,
+            phoneNumber: fullPhoneNumber,
+            createdAt: firestore.FieldValue.serverTimestamp(),
+            lastLogin: firestore.FieldValue.serverTimestamp()
+          });
+  
+        // Create user in PostgreSQL
+        const response = await fetch('http://localhost:5000/api/users', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            id: fullPhoneNumber,
+            name: name,
+            contactInfo: fullPhoneNumber,
+            latitude: 0,
+            longitude: 0,
+            userType: 'emergency_user'
+          }),
+        });
+  
+        if (!response.ok) {
+          throw new Error('Failed to create user in database');
+        }
+  
+        Alert.alert(
+          'Success', 
+          'Account created successfully!',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                navigation.navigate('OTPVerification', { 
+                  phoneNumber: fullPhoneNumber,
+                  name: name,
+                  isSignUp: true
+                });
+              }
+            }
+          ]
+        );
+  
+      } catch (error) {
+        console.error('Signup error:', error);
+        Alert.alert(
+          'Error',
+          'Unable to create account. Please try again later.'
+        );
+      }
     }
   };
 
