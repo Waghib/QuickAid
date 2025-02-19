@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,8 +14,7 @@ import { authStyles } from '../styles/authStyles';
 import { getDynamicStyles } from '../styles/dynamicStyles';
 import { AuthLogo, AuthInput, AuthButton } from '../components/authComponents';
 
-const SignInScreen = () => {
-  const navigation = useNavigation();
+const SignInScreen = ({ navigation }) => {
   const { height, width } = useWindowDimensions();
   const [phoneNumber, setPhoneNumber] = useState('');
   const [phoneError, setPhoneError] = useState('');
@@ -70,11 +69,10 @@ const SignInScreen = () => {
 
     if (isPhoneValid) {
       try {
-        // Remove hyphen before sending
         const cleanNumber = phoneNumber.replace(/-/g, '');
         const fullPhoneNumber = `+92${cleanNumber}`;
 
-        // Check if user exists in Firestore
+        // Check Firebase
         const userDoc = await firestore()
           .collection('users')
           .doc(fullPhoneNumber)
@@ -89,7 +87,7 @@ const SignInScreen = () => {
           return;
         }
 
-        // Update last login timestamp
+        // Update Firebase last login
         await firestore()
           .collection('users')
           .doc(fullPhoneNumber)
@@ -97,21 +95,54 @@ const SignInScreen = () => {
             lastLogin: firestore.FieldValue.serverTimestamp()
           });
 
-        // Navigate to OTP verification with user data
-        navigation.navigate('OTPVerification', { 
-          phoneNumber: fullPhoneNumber,
-          name: userDoc.data().name,
-          isSignUp: false
+        // Update PostgreSQL last login
+        const response = await fetch('http://10.0.2.2:5000/api/users/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            phoneNumber: fullPhoneNumber,
+            name: userDoc.data().name
+          })
         });
 
+        if (!response.ok) {
+          throw new Error('Failed to update login in database');
+        }
+
+        // Add an alert before navigation
+        Alert.alert(
+          'Debug',
+          'About to navigate to OTP screen',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                console.log('Navigating to OTP screen...');
+                navigation.navigate('OTPVerification', {
+                  phoneNumber: fullPhoneNumber,
+                  name: userDoc.data().name,
+                  isSignUp: false
+                });
+                console.log('Navigation command executed');
+              }
+            }
+          ]
+        );
+
       } catch (error) {
-        console.error('Sign in error:', error);
+        console.error('==== Error in Sign In ====');
+        console.error('Error type:', error.constructor.name);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
         Alert.alert(
           'Error',
           'Unable to sign in. Please check your internet connection and try again.'
         );
       }
     } else {
+      console.log('Phone validation failed');
       Alert.alert('Validation Error', 'Please enter a valid phone number');
     }
   };
@@ -172,7 +203,11 @@ const SignInScreen = () => {
           authStyles.actionButton,
           !isPhoneComplete(phoneNumber) ? authStyles.disabledButton : null
         ]}
-        onPress={handleSignIn}
+        onPress={() => {
+          console.log('Button pressed');
+          Alert.alert('Debug', 'Sign In button pressed');
+          handleSignIn();
+        }}
         disabled={!isPhoneComplete(phoneNumber)}
       >
         <Text style={authStyles.actionButtonText}>Sign In</Text>
