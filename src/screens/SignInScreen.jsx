@@ -107,29 +107,21 @@ const SignInScreen = ({ navigation }) => {
           })
         });
 
+        const responseData = await response.json();
+
         if (!response.ok) {
           throw new Error('Failed to update login in database');
         }
 
-        // Add an alert before navigation
-        Alert.alert(
-          'Debug',
-          'About to navigate to OTP screen',
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                console.log('Navigating to OTP screen...');
-                navigation.navigate('OTPVerification', {
-                  phoneNumber: fullPhoneNumber,
-                  name: userDoc.data().name,
-                  isSignUp: false
-                });
-                console.log('Navigation command executed');
-              }
-            }
-          ]
-        );
+        // Add this log to verify the flow
+        console.log('Database updated, proceeding to OTP');
+
+        // Proceed with navigation
+        navigation.navigate('OTPVerification', {
+          phoneNumber: fullPhoneNumber,
+          name: userDoc.data().name,
+          isSignUp: false
+        });
 
       } catch (error) {
         console.error('==== Error in Sign In ====');
@@ -204,8 +196,6 @@ const SignInScreen = ({ navigation }) => {
           !isPhoneComplete(phoneNumber) ? authStyles.disabledButton : null
         ]}
         onPress={() => {
-          console.log('Button pressed');
-          Alert.alert('Debug', 'Sign In button pressed');
           handleSignIn();
         }}
         disabled={!isPhoneComplete(phoneNumber)}

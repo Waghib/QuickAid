@@ -44,14 +44,12 @@ app.post('/api/users', async (req, res) => {
   }
 });
 
-// Login endpoint
+// Update user's login - match the endpoint used in SignInScreen
 app.post('/api/users/login', async (req, res) => {
   try {
-    console.log('Received login request:', req.body); // Debug log
-
     const { phoneNumber, name } = req.body;
-
-    // Find or create user
+    
+    // Find or create user in database
     const [user, created] = await User.findOrCreate({
       where: { id: phoneNumber },
       defaults: {
@@ -66,22 +64,13 @@ app.post('/api/users/login', async (req, res) => {
     // Update last login time
     await user.update({ updatedAt: new Date() });
 
-    console.log('User logged in:', user.id); // Debug log
-
     res.status(200).json({ 
       message: 'Login successful',
-      user: {
-        id: user.id,
-        name: user.name,
-        created: created
-      }
+      user: user
     });
   } catch (error) {
-    console.error('Login error:', error); // Debug log
-    res.status(500).json({ 
-      message: 'Failed to process login',
-      error: error.message 
-    });
+    console.error('Login error:', error);
+    res.status(500).json({ message: 'Failed to process login' });
   }
 });
 
