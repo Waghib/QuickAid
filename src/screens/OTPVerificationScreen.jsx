@@ -72,12 +72,21 @@ const OTPVerificationScreen = () => {
                     text: 'OK',
                     onPress: () => {
                       if (userData.role === 'responder') {
-                        navigation.navigate('ResponderHome');
+                        navigation.reset({
+                          index: 0,
+                          routes: [{ name: 'ResponderHome' }],
+                        });
                       } else if (userData.role === 'emergency') {
-                        navigation.navigate('Home');
+                        navigation.reset({
+                          index: 0,
+                          routes: [{ name: 'Home' }],
+                        });
                       } else {
                         // If role is not set, send to UserTypeSelection
-                        navigation.navigate('UserTypeSelection');
+                        navigation.reset({
+                          index: 0,
+                          routes: [{ name: 'UserTypeSelection' }],
+                        });
                       }
                     }
                   }
@@ -92,7 +101,10 @@ const OTPVerificationScreen = () => {
               [
                 {
                   text: 'OK',
-                  onPress: () => navigation.navigate('UserTypeSelection')
+                  onPress: () => navigation.reset({
+                    index: 0,
+                    routes: [{ name: 'UserTypeSelection' }],
+                  })
                 }
               ]
             );

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,18 +8,35 @@ import {
   useWindowDimensions,
   Alert,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import firestore from '@react-native-firebase/firestore';
 import { authStyles } from '../styles/authStyles';
 import { getDynamicStyles } from '../styles/dynamicStyles';
 import { AuthLogo, AuthInput, AuthButton } from '../components/authComponents';
 
-const SignInScreen = ({ navigation }) => {
+const SignInScreen = () => {
   const { height, width } = useWindowDimensions();
   const [phoneNumber, setPhoneNumber] = useState('');
   const [phoneError, setPhoneError] = useState('');
+  const navigation = useNavigation();
 
   const dynamicStyles = getDynamicStyles(width, height);
+
+  // Clean up resources when screen loses focus
+  useFocusEffect(
+    useCallback(() => {
+      // This function runs when the screen comes into focus
+      console.log('SignInScreen is now focused');
+      
+      // Return a cleanup function that runs when the screen loses focus
+      return () => {
+        console.log('SignInScreen lost focus - cleaning up resources');
+        // Reset form state when screen is unfocused
+        setPhoneNumber('');
+        setPhoneError('');
+      };
+    }, [])
+  );
 
   // Phone validation function
   const validatePhone = (text) => {
