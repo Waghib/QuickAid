@@ -9,6 +9,20 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Add CORS headers
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  
+  next();
+});
+
 // Database and Models
 const sequelize = require('./config/database');
 const { User, EmergencyUser, FirstResponder, EmergencyRequest, Feedback, Notification } = require('./models');
@@ -35,42 +49,63 @@ app.get('/', (req, res) => {
 
 // Create new user
 app.post('/api/users', async (req, res) => {
+  console.log('Received request to create user:', req.body);
   try {
     const user = await User.create(req.body);
-    res.status(201).json(user);
+    console.log('User created successfully:', user.id);
+    
+    // Send a smaller, simpler response
+    res.status(201).json({ 
+      success: true, 
+      message: 'User created successfully',
+      userId: user.id
+    });
   } catch (error) {
-    console.error('Error creating user:', error);
-    res.status(500).json({ message: 'Failed to create user' });
+    console.error('Error creating user:', error.message);
+    console.error('Error details:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to create user', 
+      error: error.message 
+    });
   }
 });
 
-// Update user's login - match the endpoint used in SignInScreen
+// User login
 app.post('/api/users/login', async (req, res) => {
+  console.log('Received login request:', req.body);
   try {
-    const { phoneNumber, name } = req.body;
+    const { id } = req.body;
     
-    // Find or create user in database
-    const [user, created] = await User.findOrCreate({
-      where: { id: phoneNumber },
-      defaults: {
-        name: name,
-        contactInfo: phoneNumber,
-        latitude: 0,
-        longitude: 0,
-        userType: 'emergency_user'
-      }
-    });
-
+    // Find the user
+    const user = await User.findByPk(id);
+    
+    if (!user) {
+      console.error('User not found:', id);
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found' 
+      });
+    }
+    
     // Update last login time
-    await user.update({ updatedAt: new Date() });
-
+    user.lastLogin = new Date();
+    await user.save();
+    
+    console.log('User login successful:', id);
     res.status(200).json({ 
+      success: true, 
       message: 'Login successful',
-      user: user
+      userId: id
     });
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ message: 'Failed to process login' });
+    console.error('Error during login:', error.message);
+    console.error('Error details:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Login failed', 
+      error: error.message 
+    });
   }
 });
 
