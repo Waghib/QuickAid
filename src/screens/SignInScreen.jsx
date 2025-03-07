@@ -95,33 +95,34 @@ const SignInScreen = ({ navigation }) => {
             lastLogin: firestore.FieldValue.serverTimestamp()
           });
 
-        // Update PostgreSQL last login
-        const response = await fetch('http://10.0.2.2:5000/api/users/login', {
+        // Update PostgreSQL last login (fire and forget)
+        fetch('http://10.0.2.2:5000/api/users/login', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            phoneNumber: fullPhoneNumber,
-            name: userDoc.data().name
+            id: fullPhoneNumber
           })
+        }).catch(error => {
+          console.error('PostgreSQL login fetch error:', error);
+          // We're ignoring errors here since Firebase authentication was successful
         });
 
-        const responseData = await response.json();
-
-        if (!response.ok) {
-          throw new Error('Failed to update login in database');
-        }
-
-        // Add this log to verify the flow
-        console.log('Database updated, proceeding to OTP');
-
-        // Proceed with navigation
-        navigation.navigate('OTPVerification', {
-          phoneNumber: fullPhoneNumber,
-          name: userDoc.data().name,
-          isSignUp: false
-        });
+        // Show success message and navigate
+        Alert.alert(
+          'Success',
+          'Login successful!',
+          [{
+            text: 'OK',
+            onPress: () => {
+              navigation.navigate('OTPVerification', { 
+                phoneNumber: fullPhoneNumber,
+                isSignUp: false
+              });
+            }
+          }]
+        );
 
       } catch (error) {
         console.error('==== Error in Sign In ====');

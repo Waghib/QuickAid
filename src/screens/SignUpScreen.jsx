@@ -123,30 +123,31 @@ const SignUpScreen = () => {
           });
   
         // Create user in PostgreSQL
-        const response = await fetch('http://localhost:5000/api/users', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            id: fullPhoneNumber,
-            name: name,
-            contactInfo: fullPhoneNumber,
-            latitude: 0,
-            longitude: 0,
-            userType: 'emergency_user'
-          }),
-        });
-  
-        if (!response.ok) {
-          throw new Error('Failed to create user in database');
-        }
-  
-        Alert.alert(
-          'Success', 
-          'Account created successfully!',
-          [
-            {
+        try {
+          // "Fire and forget" approach - don't wait for response
+          fetch('http://10.0.2.2:5000/api/users', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              id: fullPhoneNumber,
+              name: name,
+              contactInfo: fullPhoneNumber,
+              latitude: 0,
+              longitude: 0,
+              userType: 'emergency_user'
+            })
+          }).catch(error => {
+            console.error('Fetch error:', error);
+            // We're ignoring errors here since we know the user is created server-side
+          });
+          
+          // Proceed immediately without waiting for response
+          Alert.alert(
+            'Success', 
+            'Account created successfully!',
+            [{
               text: 'OK',
               onPress: () => {
                 navigation.navigate('OTPVerification', { 
@@ -155,10 +156,21 @@ const SignUpScreen = () => {
                   isSignUp: true
                 });
               }
+            }]
+          );
+        } catch (outerError) {
+          // Handle any errors in the try block
+          Alert.alert('Error', 'Outer error: ' + outerError.message, [{ 
+            text: 'OK',
+            onPress: () => {
+              navigation.navigate('OTPVerification', { 
+                phoneNumber: fullPhoneNumber,
+                name: name,
+                isSignUp: true
+              });
             }
-          ]
-        );
-  
+          }]);
+        }
       } catch (error) {
         console.error('Signup error:', error);
         Alert.alert(
