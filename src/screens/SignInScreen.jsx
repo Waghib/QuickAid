@@ -100,7 +100,16 @@ const SignInScreen = () => {
             'Account Not Found', 
             'This phone number is not registered. Please sign up first.'
           );
-          navigation.navigate('SignUp');
+          
+          // Format the phone number with a dash after 3 digits
+          const formattedPhone = cleanNumber.length >= 3 
+            ? `${cleanNumber.substring(0, 3)}-${cleanNumber.substring(3)}`
+            : cleanNumber;
+            
+          // Pass the formatted phone number to SignUp screen
+          navigation.navigate('SignUp', { 
+            prefillPhone: formattedPhone 
+          });
           return;
         }
 

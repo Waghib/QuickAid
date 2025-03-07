@@ -17,7 +17,7 @@ import ResponderAccount from './src/screens/ResponderAccount';
 
 // Define the type for the navigation stack
 type RootStackParamList = {
-  SignUp: undefined;
+  SignUp: { prefillPhone?: string } | undefined;
   SignIn: undefined;
   OTPVerification: { phoneNumber: string; name?: string; isSignUp: boolean };
   UserTypeSelection: undefined;
