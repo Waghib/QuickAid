@@ -17,10 +17,10 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const App: React.FC = () => {
   return (
-    <NavigationContainer>
-      <Stack.Navigator 
+    <NavigationContainer detachInactiveScreens={true}>
+      <Stack.Navigator
         initialRouteName='SignUp'
-        screenOptions={{ 
+        screenOptions={{
           headerShown: false,
         }}
       >

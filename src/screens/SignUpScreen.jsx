@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   useWindowDimensions,
   Alert,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import firestore from '@react-native-firebase/firestore';
 import { authStyles } from '../styles/authStyles';
 import { getDynamicStyles } from '../styles/dynamicStyles';
@@ -23,6 +23,24 @@ const SignUpScreen = () => {
   const [phoneError, setPhoneError] = useState('');
 
   const dynamicStyles = getDynamicStyles(width, height);
+
+  // Clean up resources when screen loses focus
+  useFocusEffect(
+    useCallback(() => {
+      // This function runs when the screen comes into focus
+      console.log('SignUpScreen is now focused');
+      
+      // Return a cleanup function that runs when the screen loses focus
+      return () => {
+        console.log('SignUpScreen lost focus - cleaning up resources');
+        // Reset form state when screen is unfocused
+        setName('');
+        setPhoneNumber('');
+        setNameError('');
+        setPhoneError('');
+      };
+    }, [])
+  );
 
   // Name validation
   const validateName = (text) => {
