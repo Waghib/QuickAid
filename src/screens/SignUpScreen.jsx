@@ -14,15 +14,22 @@ import { authStyles } from '../styles/authStyles';
 import { getDynamicStyles } from '../styles/dynamicStyles';
 import { AuthLogo, AuthInput, AuthButton } from '../components/authComponents';
 
-const SignUpScreen = () => {
+const SignUpScreen = ({ route }) => {
   const navigation = useNavigation();
   const { height, width } = useWindowDimensions();
   const [name, setName] = useState('');
   const [nameError, setNameError] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState(route.params?.prefillPhone || '');
   const [phoneError, setPhoneError] = useState('');
 
   const dynamicStyles = getDynamicStyles(width, height);
+
+  // Validate prefilled phone number when component mounts
+  useEffect(() => {
+    if (route.params?.prefillPhone) {
+      validatePhone(route.params.prefillPhone);
+    }
+  }, [route.params?.prefillPhone]);
 
   // Clean up resources when screen loses focus
   useFocusEffect(
@@ -35,11 +42,11 @@ const SignUpScreen = () => {
         console.log('SignUpScreen lost focus - cleaning up resources');
         // Reset form state when screen is unfocused
         setName('');
-        setPhoneNumber('');
+        setPhoneNumber(route.params?.prefillPhone || '');
         setNameError('');
         setPhoneError('');
       };
-    }, [])
+    }, [route.params?.prefillPhone])
   );
 
   // Name validation
