@@ -48,10 +48,8 @@ const AccountScreen = () => {
   const handleLogout = async () => {
     try {
       await auth().signOut();
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'SignUp' }],
-      });
+      // No need to navigate - the auth state change will automatically
+      // trigger the navigation in App.tsx through the onAuthStateChanged listener
     } catch (error) {
       console.error('Logout error:', error);
       Alert.alert('Error', 'Failed to logout');
