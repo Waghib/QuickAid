@@ -149,7 +149,6 @@ const SignInScreen = () => {
             }
           }]
         );
-
       } catch (error) {
         console.error('==== Error in Sign In ====');
         console.error('Error type:', error.constructor.name);

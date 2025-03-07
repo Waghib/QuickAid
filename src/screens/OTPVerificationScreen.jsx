@@ -1,14 +1,15 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
+  StyleSheet,
   StatusBar,
   useWindowDimensions,
   Alert,
 } from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import auth from '@react-native-firebase/auth';
 import { authStyles } from '../styles/authStyles';
 import { getDynamicStyles } from '../styles/dynamicStyles';
@@ -64,6 +65,8 @@ const OTPVerificationScreen = () => {
 
             if (userDoc.exists) {
               const userData = userDoc.data();
+              
+              // First show alert
               Alert.alert(
                 'Success',
                 'Phone number verified successfully!',
@@ -71,6 +74,7 @@ const OTPVerificationScreen = () => {
                   {
                     text: 'OK',
                     onPress: () => {
+                      // Then navigate based on role
                       if (userData.role === 'responder') {
                         navigation.reset({
                           index: 0,
@@ -90,7 +94,8 @@ const OTPVerificationScreen = () => {
                       }
                     }
                   }
-                ]
+                ],
+                { cancelable: false }
               );
             }
           } else {
@@ -106,7 +111,8 @@ const OTPVerificationScreen = () => {
                     routes: [{ name: 'UserTypeSelection' }],
                   })
                 }
-              ]
+              ],
+              { cancelable: false }
             );
           }
         }
@@ -129,30 +135,23 @@ const OTPVerificationScreen = () => {
   const handleOtpChange = (text, index) => {
     const cleanText = text.replace(/[^0-9]/g, '');
     
-    const newOtp = [...otp];
-    newOtp[index] = cleanText;
-    setOtp(newOtp);
-
-    if (cleanText && index < 5) {
-      inputRefs.current[index + 1].focus();
+    if (cleanText.length <= 1) {
+      const newOtp = [...otp];
+      newOtp[index] = cleanText;
+      setOtp(newOtp);
+      
+      // Auto-focus next input if a digit was entered
+      if (cleanText.length === 1 && index < 5) {
+        inputRefs.current[index + 1].focus();
+      }
     }
   };
 
   const handleKeyPress = (e, index) => {
-    if (e.nativeEvent.key === 'Backspace') {
+    // Handle backspace
+    if (e.nativeEvent.key === 'Backspace' && index > 0 && otp[index] === '') {
       const newOtp = [...otp];
-      
-      // Clear current block
-      newOtp[index] = '';
-      setOtp(newOtp);
-      
-      // Move to previous block if not at first block
-      if (index > 0) {
-        inputRefs.current[index - 1].focus();
-        // Clear the previous block too
-        newOtp[index - 1] = '';
-        setOtp(newOtp);
-      }
+      inputRefs.current[index - 1].focus();
     }
   };
 
@@ -173,10 +172,7 @@ const OTPVerificationScreen = () => {
       <StatusBar backgroundColor="#2B95E1" barStyle="light-content" />
       
       <View style={[authStyles.topSection, dynamicStyles.topSection]}>
-        <TouchableOpacity 
-          style={authStyles.backButton} 
-          onPress={handleBack}
-        >
+        <TouchableOpacity onPress={handleBack} style={authStyles.backButton}>
           <Text style={authStyles.backArrow}>{"❮"}</Text>
         </TouchableOpacity>
         <Text style={[authStyles.title, dynamicStyles.title]}>
@@ -186,7 +182,7 @@ const OTPVerificationScreen = () => {
           Enter your OTP code sent to {phoneNumber}
         </Text>
       </View>
-
+      
       <View style={[authStyles.otpContainer, dynamicStyles.otpContainer]}>
         {otp.map((digit, index) => (
           <TextInput
@@ -214,7 +210,7 @@ const OTPVerificationScreen = () => {
           />
         ))}
       </View>
-
+      
       <TouchableOpacity 
         style={[
           authStyles.verifyButton,
@@ -228,16 +224,11 @@ const OTPVerificationScreen = () => {
           Verify Now
         </Text>
       </TouchableOpacity>
-
-      <TouchableOpacity 
-        style={authStyles.resendContainer}
-        onPress={handleResendOTP}
-      >
+      
+      <TouchableOpacity style={authStyles.resendContainer} onPress={handleResendOTP}>
         <Text style={[authStyles.resendText, dynamicStyles.resendText]}>
           Didn't receive code?{' '}
-        </Text>
-        <Text style={[authStyles.resendLink, dynamicStyles.resendText]}>
-          Resend
+          <Text style={authStyles.resendLink}>Resend</Text>
         </Text>
       </TouchableOpacity>
     </View>
