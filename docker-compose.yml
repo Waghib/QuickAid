@@ -12,6 +12,8 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - quickaid-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
@@ -28,6 +30,12 @@ services:
       - "5051:80"
     depends_on:
       - postgres
+    networks:
+      - quickaid-network
 
 volumes:
   postgres_data:
+
+networks:
+  quickaid-network:
+    driver: bridge

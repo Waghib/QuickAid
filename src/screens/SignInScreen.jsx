@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,19 +8,35 @@ import {
   useWindowDimensions,
   Alert,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import firestore from '@react-native-firebase/firestore';
 import { authStyles } from '../styles/authStyles';
 import { getDynamicStyles } from '../styles/dynamicStyles';
 import { AuthLogo, AuthInput, AuthButton } from '../components/authComponents';
 
 const SignInScreen = () => {
-  const navigation = useNavigation();
   const { height, width } = useWindowDimensions();
   const [phoneNumber, setPhoneNumber] = useState('');
   const [phoneError, setPhoneError] = useState('');
+  const navigation = useNavigation();
 
   const dynamicStyles = getDynamicStyles(width, height);
+
+  // Clean up resources when screen loses focus
+  useFocusEffect(
+    useCallback(() => {
+      // This function runs when the screen comes into focus
+      console.log('SignInScreen is now focused');
+      
+      // Return a cleanup function that runs when the screen loses focus
+      return () => {
+        console.log('SignInScreen lost focus - cleaning up resources');
+        // Reset form state when screen is unfocused
+        setPhoneNumber('');
+        setPhoneError('');
+      };
+    }, [])
+  );
 
   // Phone validation function
   const validatePhone = (text) => {
@@ -70,11 +86,10 @@ const SignInScreen = () => {
 
     if (isPhoneValid) {
       try {
-        // Remove hyphen before sending
         const cleanNumber = phoneNumber.replace(/-/g, '');
         const fullPhoneNumber = `+92${cleanNumber}`;
 
-        // Check if user exists in Firestore
+        // Check Firebase
         const userDoc = await firestore()
           .collection('users')
           .doc(fullPhoneNumber)
@@ -85,11 +100,20 @@ const SignInScreen = () => {
             'Account Not Found', 
             'This phone number is not registered. Please sign up first.'
           );
-          navigation.navigate('SignUp');
+          
+          // Format the phone number with a dash after 3 digits
+          const formattedPhone = cleanNumber.length >= 3 
+            ? `${cleanNumber.substring(0, 3)}-${cleanNumber.substring(3)}`
+            : cleanNumber;
+            
+          // Pass the formatted phone number to SignUp screen
+          navigation.navigate('SignUp', { 
+            prefillPhone: formattedPhone 
+          });
           return;
         }
 
-        // Update last login timestamp
+        // Update Firebase last login
         await firestore()
           .collection('users')
           .doc(fullPhoneNumber)
@@ -97,21 +121,46 @@ const SignInScreen = () => {
             lastLogin: firestore.FieldValue.serverTimestamp()
           });
 
-        // Navigate to OTP verification with user data
-        navigation.navigate('OTPVerification', { 
-          phoneNumber: fullPhoneNumber,
-          name: userDoc.data().name,
-          isSignUp: false
+        // Update PostgreSQL last login (fire and forget)
+        fetch('http://10.0.2.2:5000/api/users/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            id: fullPhoneNumber
+          })
+        }).catch(error => {
+          console.error('PostgreSQL login fetch error:', error);
+          // We're ignoring errors here since Firebase authentication was successful
         });
 
+        // Show success message and navigate
+        Alert.alert(
+          'Success',
+          'Login successful!',
+          [{
+            text: 'OK',
+            onPress: () => {
+              navigation.navigate('OTPVerification', { 
+                phoneNumber: fullPhoneNumber,
+                isSignUp: false
+              });
+            }
+          }]
+        );
       } catch (error) {
-        console.error('Sign in error:', error);
+        console.error('==== Error in Sign In ====');
+        console.error('Error type:', error.constructor.name);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
         Alert.alert(
           'Error',
           'Unable to sign in. Please check your internet connection and try again.'
         );
       }
     } else {
+      console.log('Phone validation failed');
       Alert.alert('Validation Error', 'Please enter a valid phone number');
     }
   };
@@ -172,7 +221,9 @@ const SignInScreen = () => {
           authStyles.actionButton,
           !isPhoneComplete(phoneNumber) ? authStyles.disabledButton : null
         ]}
-        onPress={handleSignIn}
+        onPress={() => {
+          handleSignIn();
+        }}
         disabled={!isPhoneComplete(phoneNumber)}
       >
         <Text style={authStyles.actionButtonText}>Sign In</Text>
