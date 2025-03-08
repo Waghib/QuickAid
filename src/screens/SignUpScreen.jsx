@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,21 +8,46 @@ import {
   useWindowDimensions,
   Alert,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import firestore from '@react-native-firebase/firestore';
 import { authStyles } from '../styles/authStyles';
 import { getDynamicStyles } from '../styles/dynamicStyles';
 import { AuthLogo, AuthInput, AuthButton } from '../components/authComponents';
 
-const SignUpScreen = () => {
+const SignUpScreen = ({ route }) => {
   const navigation = useNavigation();
   const { height, width } = useWindowDimensions();
   const [name, setName] = useState('');
   const [nameError, setNameError] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState(route.params?.prefillPhone || '');
   const [phoneError, setPhoneError] = useState('');
 
   const dynamicStyles = getDynamicStyles(width, height);
+
+  // Validate prefilled phone number when component mounts
+  useEffect(() => {
+    if (route.params?.prefillPhone) {
+      validatePhone(route.params.prefillPhone);
+    }
+  }, [route.params?.prefillPhone]);
+
+  // Clean up resources when screen loses focus
+  useFocusEffect(
+    useCallback(() => {
+      // This function runs when the screen comes into focus
+      console.log('SignUpScreen is now focused');
+      
+      // Return a cleanup function that runs when the screen loses focus
+      return () => {
+        console.log('SignUpScreen lost focus - cleaning up resources');
+        // Reset form state when screen is unfocused
+        setName('');
+        setPhoneNumber(route.params?.prefillPhone || '');
+        setNameError('');
+        setPhoneError('');
+      };
+    }, [route.params?.prefillPhone])
+  );
 
   // Name validation
   const validateName = (text) => {
@@ -95,84 +120,89 @@ const SignUpScreen = () => {
     const isPhoneValid = validatePhone(phoneNumber);
   
     if (isNameValid && isPhoneValid) {
-      const maxRetries = 3;
-      let retryCount = 0;
-
-      const attemptSignUp = async () => {
-        try {
-          // Remove hyphen before sending
-          const cleanNumber = phoneNumber.replace(/-/g, '');
-          const fullPhoneNumber = `+92${cleanNumber}`;
+      try {
+        // Remove hyphen before sending
+        const cleanNumber = phoneNumber.replace(/-/g, '');
+        const fullPhoneNumber = `+92${cleanNumber}`;
   
-          // Use firestore() to get the instance
-          const userDoc = await firestore()
-            .collection('users')
-            .doc(fullPhoneNumber)
-            .get();
+        // Check if user exists in Firebase
+        const userDoc = await firestore()
+          .collection('users')
+          .doc(fullPhoneNumber)
+          .get();
   
-          if (userDoc.exists) {
-            Alert.alert('Error', 'This phone number is already registered!');
-            return;
-          }
-  
-          // Use firestore() consistently
-          await firestore()
-            .collection('users')
-            .doc(fullPhoneNumber)
-            .set({
-              name: name,
-              phoneNumber: fullPhoneNumber,
-              createdAt: firestore.FieldValue.serverTimestamp(),
-              lastLogin: firestore.FieldValue.serverTimestamp()
-            });
-  
-            Alert.alert(
-              'Success', 
-              'Account created successfully!',
-              [
-                {
-                  text: 'OK',
-                  onPress: () => {
-                    navigation.navigate('OTPVerification', { 
-                      phoneNumber: fullPhoneNumber,
-                      name: name,
-                      isSignUp: true
-                    });
-                  }
-                }
-              ]
-            );
-  
-        } catch (error) {
-          console.error('Signup error:', error);
-          
-          if (error.code === 'firestore/unavailable' && retryCount < maxRetries) {
-            retryCount++;
-            const backoffDelay = Math.pow(2, retryCount) * 1000;
-            
-            console.log(`Retry attempt ${retryCount} of ${maxRetries}. Waiting ${backoffDelay/1000} seconds...`);
-            
-            return new Promise((resolve) => {
-              setTimeout(async () => {
-                try {
-                  resolve(await attemptSignUp());
-                } catch (retryError) {
-                  console.error('Retry failed:', retryError);
-                  resolve(null);
-                }
-              }, backoffDelay);
-            });
-          }
-
-          Alert.alert(
-            'Error',
-            'Unable to connect to the server. Please check your internet connection and try again later.'
-          );
-          return null;
+        if (userDoc.exists) {
+          Alert.alert('Error', 'This phone number is already registered!');
+          return;
         }
-      };
-
-      await attemptSignUp();
+  
+        // Create user in Firebase
+        await firestore()
+          .collection('users')
+          .doc(fullPhoneNumber)
+          .set({
+            name: name,
+            phoneNumber: fullPhoneNumber,
+            createdAt: firestore.FieldValue.serverTimestamp(),
+            lastLogin: firestore.FieldValue.serverTimestamp()
+          });
+  
+        // Create user in PostgreSQL
+        try {
+          // "Fire and forget" approach - don't wait for response
+          fetch('http://10.0.2.2:5000/api/users', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              id: fullPhoneNumber,
+              name: name,
+              contactInfo: fullPhoneNumber,
+              latitude: 0,
+              longitude: 0,
+              userType: 'emergency_user'
+            })
+          }).catch(error => {
+            console.error('Fetch error:', error);
+            // We're ignoring errors here since we know the user is created server-side
+          });
+          
+          // Proceed immediately without waiting for response
+          Alert.alert(
+            'Success', 
+            'Account created successfully!',
+            [{
+              text: 'OK',
+              onPress: () => {
+                navigation.navigate('OTPVerification', { 
+                  phoneNumber: fullPhoneNumber,
+                  name: name,
+                  isSignUp: true
+                });
+              }
+            }]
+          );
+        } catch (outerError) {
+          // Handle any errors in the try block
+          Alert.alert('Error', 'Outer error: ' + outerError.message, [{ 
+            text: 'OK',
+            onPress: () => {
+              navigation.navigate('OTPVerification', { 
+                phoneNumber: fullPhoneNumber,
+                name: name,
+                isSignUp: true
+              });
+            }
+          }]);
+        }
+      } catch (error) {
+        console.error('Signup error:', error);
+        Alert.alert(
+          'Error',
+          'Unable to create account. Please try again later.'
+        );
+      }
     }
   };
 

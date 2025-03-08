@@ -9,24 +9,144 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Add CORS headers
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  
+  next();
+});
+
 // Database and Models
 const sequelize = require('./config/database');
-const models = require('./models');
+const { User, EmergencyUser, FirstResponder, EmergencyRequest, Feedback, Notification } = require('./models');
 
 // Test DB Connection and Sync Models
 sequelize.authenticate()
     .then(() => {
         console.log('Database connected successfully');
-        return sequelize.sync({ alter: true }); // In development, use alter: true to automatically update tables
+        return sequelize.sync({ alter: true });
     })
     .then(() => {
         console.log('Database models synchronized successfully');
+        console.log('Created models:', Object.keys(sequelize.models));
     })
-    .catch(err => console.error('Database connection/sync error:', err));
+    .catch(err => {
+        console.error('Database connection/sync error:', err);
+        console.error('Error details:', err.parent || err);
+    });
 
 // Routes
 app.get('/', (req, res) => {
     res.json({ message: 'Welcome to QuickAid API' });
+});
+
+// Create new user
+app.post('/api/users', async (req, res) => {
+  console.log('Received request to create user:', req.body);
+  try {
+    const user = await User.create(req.body);
+    console.log('User created successfully:', user.id);
+    
+    // Send a smaller, simpler response
+    res.status(201).json({ 
+      success: true, 
+      message: 'User created successfully',
+      userId: user.id
+    });
+  } catch (error) {
+    console.error('Error creating user:', error.message);
+    console.error('Error details:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to create user', 
+      error: error.message 
+    });
+  }
+});
+
+// User login
+app.post('/api/users/login', async (req, res) => {
+  console.log('Received login request:', req.body);
+  try {
+    const { id } = req.body;
+    
+    // Find the user
+    const user = await User.findByPk(id);
+    
+    if (!user) {
+      console.error('User not found:', id);
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found' 
+      });
+    }
+    
+    // Update last login time
+    user.lastLogin = new Date();
+    await user.save();
+    
+    console.log('User login successful:', id);
+    res.status(200).json({ 
+      success: true, 
+      message: 'Login successful',
+      userId: id
+    });
+  } catch (error) {
+    console.error('Error during login:', error.message);
+    console.error('Error details:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Login failed', 
+      error: error.message 
+    });
+  }
+});
+
+// Add this route to check database status
+app.get('/api/status', async (req, res) => {
+  try {
+    // Test database connection
+    await sequelize.authenticate();
+    
+    // Get table information specifically from public schema
+    const [results] = await sequelize.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      AND table_type = 'BASE TABLE'
+    `);
+    
+    // Get all model names
+    const modelNames = Object.keys(sequelize.models);
+    
+    // Count users
+    const userCount = await User.count();
+    
+    res.json({
+      status: 'healthy',
+      database: 'connected',
+      definedModels: modelNames,
+      existingTables: results.map(r => r.table_name),
+      userCount: userCount,
+      schemaInfo: {
+        models: sequelize.models,
+        tableCount: results.length
+      }
+    });
+  } catch (error) {
+    console.error('Database status check failed:', error);
+    res.status(500).json({
+      status: 'unhealthy',
+      error: error.message
+    });
+  }
 });
 
 // Error handling middleware
