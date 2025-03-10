@@ -12,7 +12,8 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import auth from '@react-native-firebase/auth';
-import firestore from '@react-native-firebase/firestore';
+import axios from 'axios';
+import { API_BASE_URL } from '../config/api';
 
 const ProgressBar = ({ progress }) => {
   return (
@@ -278,40 +279,43 @@ const Training = () => {
     }
   ];
 
-  // Load user's completed videos from Firestore
+  // Load user's training progress from API
   useEffect(() => {
     if (!currentUser) {
       setLoading(false);
       return;
     }
 
-    const userRef = firestore()
-      .collection('users')
-      .doc(currentUser.phoneNumber || currentUser.uid);
-    
-    const unsubscribe = userRef
-      .collection('trainingProgress')
-      .onSnapshot(snapshot => {
-        const completedVideosData = {};
-        snapshot.forEach(doc => {
-          completedVideosData[doc.id] = doc.data().completed;
-        });
+    const fetchTrainingProgress = async () => {
+      try {
+        const userId = currentUser.phoneNumber || currentUser.uid;
         
-        setCompletedVideos(completedVideosData);
+        // Fetch training progress from API
+        const response = await axios.get(`${API_BASE_URL}/api/users/${userId}/training-progress`);
         
-        // Calculate progress percentage
-        const totalVideos = trainingVideos.length;
-        const completedCount = Object.values(completedVideosData).filter(Boolean).length;
-        const progressPercentage = (completedCount / totalVideos) * 100;
-        setProgress(progressPercentage);
+        if (response.data.success) {
+          // Convert array of progress items to an object with videoId as key
+          const completedVideosData = {};
+          
+          // Process the progress data
+          response.data.data.progress.forEach(item => {
+            completedVideosData[item.videoId] = item.completed;
+          });
+          
+          setCompletedVideos(completedVideosData);
+          
+          // Set progress percentage
+          setProgress(response.data.data.stats.progressPercentage);
+        }
         
         setLoading(false);
-      }, error => {
+      } catch (error) {
         console.error("Error loading training progress:", error);
         setLoading(false);
-      });
+      }
+    };
     
-    return () => unsubscribe();
+    fetchTrainingProgress();
   }, [currentUser]);
 
   // Handle marking a video as completed
@@ -319,23 +323,26 @@ const Training = () => {
     if (!currentUser) return;
     
     try {
-      const userRef = firestore()
-        .collection('users')
-        .doc(currentUser.phoneNumber || currentUser.uid);
+      const userId = currentUser.phoneNumber || currentUser.uid;
       
-      await userRef
-        .collection('trainingProgress')
-        .doc(videoId.toString())
-        .set({
-          completed: true,
-          completedAt: firestore.FieldValue.serverTimestamp()
-        });
+      // Update training progress via API
+      await axios.post(`${API_BASE_URL}/api/users/${userId}/training-progress`, {
+        videoId,
+        completed: true
+      });
       
       // Update local state
       setCompletedVideos(prev => ({
         ...prev,
         [videoId]: true
       }));
+      
+      // Update progress percentage
+      const totalVideos = trainingVideos.length;
+      const completedCount = Object.values({...completedVideos, [videoId]: true}).filter(Boolean).length;
+      const progressPercentage = (completedCount / totalVideos) * 100;
+      setProgress(progressPercentage);
+      
     } catch (error) {
       console.error("Error updating training progress:", error);
     }

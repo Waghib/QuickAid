@@ -31,11 +31,10 @@ const { User, EmergencyUser, FirstResponder, EmergencyRequest, Feedback, Notific
 sequelize.authenticate()
     .then(() => {
         console.log('Database connected successfully');
-        return sequelize.sync({ alter: true });
+        return sequelize.sync({ force: true });
     })
     .then(() => {
-        console.log('Database models synchronized successfully');
-        console.log('Created models:', Object.keys(sequelize.models));
+        console.log('Database synced successfully');
     })
     .catch(err => {
         console.error('Database connection/sync error:', err);
@@ -419,6 +418,31 @@ app.put('/api/certifications/:userId', async (req, res) => {
     // Update certification status
     certification.status = status || certification.status;
     await certification.save();
+    
+    // Also update FirstResponder record if it exists
+    try {
+      const firstResponder = await FirstResponder.findOne({
+        where: { userId }
+      });
+      
+      if (firstResponder) {
+        firstResponder.certificationStatus = status;
+        
+        // If certification is approved, set the completion date to now
+        if (status === 'approved') {
+          firstResponder.trainingCompletionDate = new Date();
+          // Set expiry date to 2 years from now
+          const expiryDate = new Date();
+          expiryDate.setFullYear(expiryDate.getFullYear() + 2);
+          firstResponder.certificationExpiryDate = expiryDate;
+        }
+        
+        await firstResponder.save();
+      }
+    } catch (error) {
+      console.error('Error updating first responder status:', error);
+      // Don't fail the whole request if just the FirstResponder update fails
+    }
     
     res.status(200).json({
       success: true,

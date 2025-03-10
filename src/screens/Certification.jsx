@@ -12,7 +12,10 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import auth from '@react-native-firebase/auth';
-import firestore from '@react-native-firebase/firestore';
+import axios from 'axios';
+
+// Import API base URL from a config file (you may need to create this)
+import { API_BASE_URL } from '../config/api';
 
 const Certification = () => {
   const navigation = useNavigation();
@@ -23,58 +26,51 @@ const Certification = () => {
   const [requestStatus, setRequestStatus] = useState('');
   const currentUser = auth().currentUser;
 
-  // Load user's training progress from Firestore
+  // Load user's training progress from API
   useEffect(() => {
     if (!currentUser) {
       setLoading(false);
       return;
     }
 
-    const userRef = firestore()
-      .collection('users')
-      .doc(currentUser.phoneNumber || currentUser.uid);
+    const userId = currentUser.phoneNumber || currentUser.uid;
     
-    // Get certification request status if exists
-    const fetchCertificationStatus = async () => {
+    const fetchData = async () => {
       try {
-        const certDoc = await userRef.collection('certifications').doc('request').get();
-        if (certDoc.exists) {
-          setHasPendingRequest(true);
-          setRequestStatus(certDoc.data().status || 'pending');
+        // Fetch training progress from API
+        const trainingResponse = await axios.get(`${API_BASE_URL}/api/users/${userId}/training-progress`);
+        
+        if (trainingResponse.data.success) {
+          const { totalVideos, completedVideos, progressPercentage } = trainingResponse.data.data.stats;
+          
+          setProgress(progressPercentage);
+          setIsEligible(progressPercentage === 100);
         }
+        
+        // Fetch certification status from API
+        const certResponse = await axios.get(`${API_BASE_URL}/api/users/${userId}/certification`);
+        
+        if (certResponse.data.success) {
+          const certData = certResponse.data.data;
+          
+          if (certData.exists && certData.hasPendingRequest) {
+            setHasPendingRequest(true);
+            setRequestStatus(certData.status || 'pending');
+          }
+        }
+        
+        setLoading(false);
       } catch (error) {
-        console.error("Error fetching certification status:", error);
+        console.error("Error fetching data:", error);
+        // If the certification record doesn't exist yet, that's fine
+        if (error.response && error.response.status === 404) {
+          setHasPendingRequest(false);
+        }
+        setLoading(false);
       }
     };
-
-    // Subscribe to training progress updates
-    const unsubscribe = userRef
-      .collection('trainingProgress')
-      .onSnapshot(async snapshot => {
-        // Count completed videos
-        const completedVideosData = {};
-        snapshot.forEach(doc => {
-          completedVideosData[doc.id] = doc.data().completed;
-        });
-        
-        // Get total number of training videos
-        const trainingRef = await firestore().collection('trainingVideos').get();
-        const totalVideos = trainingRef.size > 0 ? trainingRef.size : 21; // Default to 21 if collection is empty
-        
-        const completedCount = Object.values(completedVideosData).filter(Boolean).length;
-        const progressPercentage = (completedCount / totalVideos) * 100;
-        
-        setProgress(progressPercentage);
-        setIsEligible(progressPercentage === 100);
-        
-        await fetchCertificationStatus();
-        setLoading(false);
-      }, error => {
-        console.error("Error loading training progress:", error);
-        setLoading(false);
-      });
     
-    return () => unsubscribe();
+    fetchData();
   }, [currentUser]);
 
   const handleRequestCertification = async () => {
@@ -100,33 +96,32 @@ const Certification = () => {
     
     try {
       setLoading(true);
-      const userRef = firestore()
-        .collection('users')
-        .doc(currentUser.phoneNumber || currentUser.uid);
+      const userId = currentUser.phoneNumber || currentUser.uid;
       
-      await userRef
-        .collection('certifications')
-        .doc('request')
-        .set({
-          status: 'pending',
-          requestedAt: firestore.FieldValue.serverTimestamp(),
-          completedTraining: true,
-          progress: progress
-        });
+      // Request certification through API
+      const response = await axios.post(`${API_BASE_URL}/api/users/${userId}/certification/request`);
       
-      setHasPendingRequest(true);
-      setRequestStatus('pending');
+      if (response.data.success) {
+        setHasPendingRequest(true);
+        setRequestStatus('pending');
+        
+        Alert.alert(
+          "Request Submitted",
+          "Your certification request has been submitted successfully. You will receive an email with details about your onsite assessment venue and date.",
+          [{ text: "OK" }]
+        );
+      } else {
+        throw new Error(response.data.message || "Unknown error");
+      }
+      
       setLoading(false);
-      
-      Alert.alert(
-        "Request Submitted",
-        "Your certification request has been submitted successfully. You will receive an email with details about your onsite assessment venue and date.",
-        [{ text: "OK" }]
-      );
     } catch (error) {
       console.error("Error submitting certification request:", error);
       setLoading(false);
-      Alert.alert("Error", "Failed to submit certification request. Please try again later.");
+      
+      // Show specific error message if available
+      const errorMessage = error.response?.data?.message || "Failed to submit certification request. Please try again later.";
+      Alert.alert("Error", errorMessage);
     }
   };
 
@@ -151,7 +146,6 @@ const Certification = () => {
         </View>
       );
     }
-    
     return null;
   };
 
