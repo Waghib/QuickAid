@@ -281,19 +281,29 @@ const Training = () => {
 
   // Load user's training progress from API
   useEffect(() => {
+    setLoading(true);
+    
     if (!currentUser) {
       setLoading(false);
       return;
     }
 
-    const fetchTrainingProgress = async () => {
-      try {
-        const userId = currentUser.phoneNumber || currentUser.uid;
-        
-        // Fetch training progress from API
-        const response = await axios.get(`${API_BASE_URL}/api/users/${userId}/training-progress`);
-        
-        if (response.data.success) {
+    // Safety timeout to ensure loading state ends
+    const safetyTimeout = setTimeout(() => {
+      if (loading) {
+        console.log('Safety timeout triggered - forcing loading state to false');
+        setLoading(false);
+      }
+    }, 5000);
+
+    const userId = currentUser.phoneNumber || currentUser.uid;
+    
+    // Fire-and-forget approach - don't await, use promises
+    axios.get(`${API_BASE_URL}/api/users/${userId}/training-progress`, {
+      timeout: 5000 // 5 second timeout
+    })
+      .then(response => {
+        if (response.data && response.data.success) {
           // Convert array of progress items to an object with videoId as key
           const completedVideosData = {};
           
@@ -306,46 +316,57 @@ const Training = () => {
           
           // Set progress percentage
           setProgress(response.data.data.stats.progressPercentage);
+        } else {
+          // Set default values if response is not successful
+          setCompletedVideos({});
+          setProgress(0);
         }
-        
-        setLoading(false);
-      } catch (error) {
+      })
+      .catch(error => {
         console.error("Error loading training progress:", error);
+        // Set default values on error
+        setCompletedVideos({});
+        setProgress(0);
+      })
+      .finally(() => {
         setLoading(false);
-      }
-    };
-    
-    fetchTrainingProgress();
+        clearTimeout(safetyTimeout);
+      });
+
+    return () => clearTimeout(safetyTimeout);
   }, [currentUser]);
 
   // Handle marking a video as completed
-  const handleVideoComplete = async (videoId) => {
+  const handleVideoComplete = (videoId) => {
     if (!currentUser) return;
     
-    try {
-      const userId = currentUser.phoneNumber || currentUser.uid;
-      
-      // Update training progress via API
-      await axios.post(`${API_BASE_URL}/api/users/${userId}/training-progress`, {
-        videoId,
-        completed: true
-      });
-      
-      // Update local state
-      setCompletedVideos(prev => ({
-        ...prev,
-        [videoId]: true
-      }));
-      
-      // Update progress percentage
-      const totalVideos = trainingVideos.length;
-      const completedCount = Object.values({...completedVideos, [videoId]: true}).filter(Boolean).length;
-      const progressPercentage = (completedCount / totalVideos) * 100;
-      setProgress(progressPercentage);
-      
-    } catch (error) {
+    const userId = currentUser.phoneNumber || currentUser.uid;
+    
+    // Update local state immediately for responsive UI
+    setCompletedVideos(prev => ({
+      ...prev,
+      [videoId]: true
+    }));
+    
+    // Update progress percentage immediately
+    const totalVideos = trainingVideos.length;
+    const completedCount = Object.values({...completedVideos, [videoId]: true}).filter(Boolean).length;
+    const progressPercentage = (completedCount / totalVideos) * 100;
+    setProgress(progressPercentage);
+    
+    // Fire-and-forget API call - don't await
+    axios.post(`${API_BASE_URL}/api/users/${userId}/training-progress`, {
+      videoId,
+      completed: true
+    })
+    .then(response => {
+      console.log('Training progress updated successfully');
+    })
+    .catch(error => {
       console.error("Error updating training progress:", error);
-    }
+      // If the API fails, we could revert the UI change, but for simplicity, 
+      // we'll keep the optimistic UI update
+    });
   };
 
   return (

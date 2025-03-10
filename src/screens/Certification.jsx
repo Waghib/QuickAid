@@ -24,52 +24,89 @@ const Certification = () => {
   const [isEligible, setIsEligible] = useState(false);
   const [hasPendingRequest, setHasPendingRequest] = useState(false);
   const [requestStatus, setRequestStatus] = useState('');
+  const [totalVideos, setTotalVideos] = useState(0);
+  const [completedVideos, setCompletedVideos] = useState(0);
+  const [certificationExists, setCertificationExists] = useState(false);
   const currentUser = auth().currentUser;
 
-  // Load user's training progress from API
   useEffect(() => {
-    if (!currentUser) {
-      setLoading(false);
-      return;
-    }
+    setLoading(true);
 
-    const userId = currentUser.phoneNumber || currentUser.uid;
-    
-    const fetchData = async () => {
-      try {
-        // Fetch training progress from API
-        const trainingResponse = await axios.get(`${API_BASE_URL}/api/users/${userId}/training-progress`);
-        
-        if (trainingResponse.data.success) {
-          const { totalVideos, completedVideos, progressPercentage } = trainingResponse.data.data.stats;
-          
-          setProgress(progressPercentage);
-          setIsEligible(progressPercentage === 100);
-        }
-        
-        // Fetch certification status from API
-        const certResponse = await axios.get(`${API_BASE_URL}/api/users/${userId}/certification`);
-        
-        if (certResponse.data.success) {
-          const certData = certResponse.data.data;
-          
-          if (certData.exists && certData.hasPendingRequest) {
-            setHasPendingRequest(true);
-            setRequestStatus(certData.status || 'pending');
-          }
-        }
-        
-        setLoading(false);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        // If the certification record doesn't exist yet, that's fine
-        if (error.response && error.response.status === 404) {
-          setHasPendingRequest(false);
-        }
-        setLoading(false);
-      }
+    // Default values to use if API fails
+    const defaultTrainingData = {
+      totalVideos: 10,
+      completedVideos: 0,
+      progressPercentage: 0
     };
+
+    const defaultCertData = {
+      exists: false,
+      hasPendingRequest: false
+    };
+
+    const userId = currentUser?.phoneNumber || '';
     
+    // Fire-and-forget approach for API calls
+    const fetchData = () => {
+      // Safety timeout to ensure we exit loading state
+      const safetyTimeout = setTimeout(() => {
+        setLoading(false);
+      }, 5000);
+
+      // Training progress API call (fire and forget)
+      axios.get(`${API_BASE_URL}/api/users/${userId}/training-progress`)
+        .then(response => {
+          if (response.data.success) {
+            const { totalVideos, completedVideos, progressPercentage } = response.data.data.stats;
+            setTotalVideos(totalVideos);
+            setCompletedVideos(completedVideos);
+            setProgress(progressPercentage);
+            setIsEligible(progressPercentage === 100);
+          } else {
+            // Use default values on failure
+            setTotalVideos(defaultTrainingData.totalVideos);
+            setCompletedVideos(defaultTrainingData.completedVideos);
+            setProgress(defaultTrainingData.progressPercentage);
+            setIsEligible(false);
+          }
+        })
+        .catch(error => {
+          console.error('Training progress API error:', error);
+          // Use default values on error
+          setTotalVideos(defaultTrainingData.totalVideos);
+          setCompletedVideos(defaultTrainingData.completedVideos);
+          setProgress(defaultTrainingData.progressPercentage);
+          setIsEligible(false);
+        });
+
+      // Certification status API call (fire and forget)
+      axios.get(`${API_BASE_URL}/api/users/${userId}/certification`)
+        .then(response => {
+          if (response.data.success) {
+            const certData = response.data.data;
+            setCertificationExists(certData.exists);
+            setHasPendingRequest(certData.hasPendingRequest);
+            if (certData.exists && certData.hasPendingRequest) {
+              setRequestStatus(certData.status || 'pending');
+            }
+          } else {
+            // Use default values on failure
+            setCertificationExists(defaultCertData.exists);
+            setHasPendingRequest(defaultCertData.hasPendingRequest);
+          }
+          setLoading(false);
+          clearTimeout(safetyTimeout);
+        })
+        .catch(error => {
+          console.error('Certification API error:', error);
+          // Use default values on error
+          setCertificationExists(defaultCertData.exists);
+          setHasPendingRequest(defaultCertData.hasPendingRequest);
+          setLoading(false);
+          clearTimeout(safetyTimeout);
+        });
+    };
+
     fetchData();
   }, [currentUser]);
 
