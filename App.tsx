@@ -14,6 +14,8 @@ import Training from './src/screens/Training';
 import ResponderHome from './src/screens/ResponderHome';
 import AccountScreen from './src/screens/AccountScreen';
 import ResponderAccount from './src/screens/ResponderAccount';
+import Help from './src/screens/Help';
+import Certification from './src/screens/Certification';
 
 // Define the type for the navigation stack
 type RootStackParamList = {
@@ -27,6 +29,8 @@ type RootStackParamList = {
   ResponderHome: undefined;
   AccountScreen: undefined;
   ResponderAccount: undefined;
+  Help: undefined;
+  Certification: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -110,6 +114,8 @@ const App: React.FC = () => {
             <Stack.Screen name="ResponderHome" component={ResponderHome} />
             <Stack.Screen name="AccountScreen" component={AccountScreen} />
             <Stack.Screen name="ResponderAccount" component={ResponderAccount} />
+            <Stack.Screen name="Help" component={Help} />
+            <Stack.Screen name="Certification" component={Certification} />
           </React.Fragment>
         )}
       </Stack.Navigator>

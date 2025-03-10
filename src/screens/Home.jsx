@@ -16,7 +16,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 
 // Separate Menu component
-const SideMenu = ({ visible, onClose, onTraining, onAccount }) => {
+const SideMenu = ({ visible, onClose, onTraining, onAccount, onHelp, onCertification }) => {
   const slideAnim = useRef(new Animated.Value(-300)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -93,6 +93,18 @@ const SideMenu = ({ visible, onClose, onTraining, onAccount }) => {
             onPress={onTraining}
           >
             <Text style={styles.menuItemText}>Training Videos</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={onCertification}
+          >
+            <Text style={styles.menuItemText}>Certification</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={onHelp}
+          >
+            <Text style={styles.menuItemText}>Help</Text>
           </TouchableOpacity>
         </Animated.View>
         <TouchableOpacity 
@@ -244,6 +256,20 @@ const Home = () => {
     }, 300);
   };
 
+  const handleHelp = () => {
+    setIsMenuVisible(false);
+    setTimeout(() => {
+      navigation.navigate('Help');
+    }, 300);
+  };
+
+  const handleCertification = () => {
+    setIsMenuVisible(false);
+    setTimeout(() => {
+      navigation.navigate('Certification');
+    }, 300);
+  };
+
   // Calculate dynamic styles based on screen dimensions
   const dynamicStyles = {
     header: {
@@ -287,24 +313,6 @@ const Home = () => {
       </View>
 
       <View style={[styles.mapContainer, dynamicStyles.mapContainer]}>
-        {/* <MapView
-          style={styles.map}
-          provider={PROVIDER_GOOGLE}
-          initialRegion={userLocation}
-          region={userLocation}
-          showsUserLocation={true}
-          showsMyLocationButton={true}
-          followsUserLocation={true}
-          onUserLocationChange={(event) => {
-            const { latitude, longitude } = event.nativeEvent.coordinate;
-            setUserLocation({
-              latitude,
-              longitude,
-              latitudeDelta: 0.0922,
-              longitudeDelta: 0.0421,
-            });
-          }}
-        /> */}
         <Text style={styles.placeholderText}>Map functionality temporarily disabled</Text>
       </View>
 
@@ -323,6 +331,8 @@ const Home = () => {
         onClose={() => setIsMenuVisible(false)}
         onTraining={handleTraining}
         onAccount={handleAccount}
+        onHelp={handleHelp}
+        onCertification={handleCertification}
       />
     </View>
   );
@@ -432,4 +442,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Home; 
+export default Home;
