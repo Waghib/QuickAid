@@ -457,6 +457,62 @@ app.put('/api/certifications/:userId', async (req, res) => {
   }
 });
 
+// Update user type
+app.put('/api/users/:userId/type', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { userType } = req.body;
+    
+    if (!userType) {
+      return res.status(400).json({ success: false, message: 'userType is required' });
+    }
+    
+    // Find user by phone number or uid
+    const user = await User.findByPk(userId);
+    
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    
+    // Update user type
+    user.userType = userType;
+    await user.save();
+    
+    // If user type is first_responder, create or update FirstResponder record
+    if (userType === 'first_responder') {
+      await FirstResponder.findOrCreate({
+        where: { userId },
+        defaults: {
+          firstResponderId: userId,
+          certificationStatus: 'pending',
+          availability: false
+        }
+      });
+    }
+    
+    // If user type is emergency_user, create or update EmergencyUser record
+    if (userType === 'emergency_user') {
+      await EmergencyUser.findOrCreate({
+        where: { userId },
+        defaults: {
+          emergencyUserId: userId
+        }
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: 'User type updated successfully',
+      data: {
+        userType: user.userType
+      }
+    });
+  } catch (error) {
+    console.error('Error updating user type:', error);
+    res.status(500).json({ success: false, message: 'Failed to update user type', error: error.message });
+  }
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error(err.stack);
