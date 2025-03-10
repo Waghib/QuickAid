@@ -86,38 +86,25 @@ const App: React.FC = () => {
 
   return (
     <NavigationContainer>
-      {/* 
-        Note: In React Navigation v7, detachInactiveScreens is enabled by default
-        for better memory management. This is the default behavior and doesn't need to be
-        explicitly configured.
-      */}
       <Stack.Navigator
         initialRouteName={getInitialRouteName()}
         screenOptions={{
           headerShown: false
         }}
       >
-        {!user ? (
-          // Auth screens
-          <React.Fragment>
-            <Stack.Screen name="SignUp" component={SignUpScreen} />
-            <Stack.Screen name="SignIn" component={SignInScreen} />
-            <Stack.Screen name="OTPVerification" component={OTPVerificationScreen} />
-          </React.Fragment>
-        ) : (
-          // App screens
-          <React.Fragment>
-            <Stack.Screen name="UserTypeSelection" component={UserTypeSelectionScreen} />
-            <Stack.Screen name="FirstResponder" component={FirstResponderScreen} />
-            <Stack.Screen name="Home" component={Home} />
-            <Stack.Screen name="Training" component={Training} />
-            <Stack.Screen name="ResponderHome" component={ResponderHome} />
-            <Stack.Screen name="AccountScreen" component={AccountScreen} />
-            <Stack.Screen name="ResponderAccount" component={ResponderAccount} />
-            <Stack.Screen name="Help" component={Help} />
-            <Stack.Screen name="Certification" component={Certification} />
-          </React.Fragment>
-        )}
+        {/* All screens are available regardless of auth state - this allows back navigation */}
+        <Stack.Screen name="SignUp" component={SignUpScreen} />
+        <Stack.Screen name="SignIn" component={SignInScreen} />
+        <Stack.Screen name="OTPVerification" component={OTPVerificationScreen} />
+        <Stack.Screen name="UserTypeSelection" component={UserTypeSelectionScreen} />
+        <Stack.Screen name="FirstResponder" component={FirstResponderScreen} />
+        <Stack.Screen name="Home" component={Home} />
+        <Stack.Screen name="Training" component={Training} />
+        <Stack.Screen name="ResponderHome" component={ResponderHome} />
+        <Stack.Screen name="AccountScreen" component={AccountScreen} />
+        <Stack.Screen name="ResponderAccount" component={ResponderAccount} />
+        <Stack.Screen name="Help" component={Help} />
+        <Stack.Screen name="Certification" component={Certification} />
       </Stack.Navigator>
     </NavigationContainer>
   );

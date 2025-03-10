@@ -160,8 +160,7 @@ const SignUpScreen = ({ route }) => {
               name: name,
               contactInfo: fullPhoneNumber,
               latitude: 0,
-              longitude: 0,
-              userType: 'emergency_user'
+              longitude: 0
             })
           }).catch(error => {
             console.error('Fetch error:', error);
