@@ -22,6 +22,10 @@ Notification.belongsTo(User, { foreignKey: 'userId' });
 Certification.belongsTo(User, { foreignKey: 'userId' });
 User.hasOne(Certification, { foreignKey: 'userId' });
 
+// First Responder certification relationship
+FirstResponder.hasOne(Certification, { foreignKey: 'userId', sourceKey: 'userId' });
+Certification.belongsTo(FirstResponder, { foreignKey: 'userId', targetKey: 'userId' });
+
 // Training progress relationships
 TrainingProgress.belongsTo(User, { foreignKey: 'userId' });
 TrainingProgress.belongsTo(TrainingVideo, { foreignKey: 'videoId' });

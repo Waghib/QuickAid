@@ -10,15 +10,23 @@ const FirstResponder = sequelize.define('FirstResponder', {
   },
   trainingCompletionDate: {
     type: DataTypes.DATE,
-    allowNull: false
+    allowNull: true
   },
   availability: {
     type: DataTypes.BOOLEAN,
     defaultValue: false
   },
   certificationStatus: {
-    type: DataTypes.STRING,
-    allowNull: false
+    type: DataTypes.ENUM('pending', 'approved', 'rejected', 'expired'),
+    defaultValue: 'pending'
+  },
+  certificationExpiryDate: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  isOnDuty: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
   }
 }, {
   timestamps: true
