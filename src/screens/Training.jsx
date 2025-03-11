@@ -1,20 +1,73 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  ScrollView,
-  Image,
   StyleSheet,
   TouchableOpacity,
-  Dimensions,
-  ActivityIndicator,
   StatusBar,
+  Image,
+  ScrollView,
   Linking,
-  Alert
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import auth from '@react-native-firebase/auth';
-import { API_BASE_URL } from '../config/api';
+import firestore from '@react-native-firebase/firestore';
+
+const ProgressBar = ({ progress }) => {
+  return (
+    <View style={styles.progressBarContainer}>
+      <View style={styles.progressBarBackground}>
+        <View style={[styles.progressBarFill, { width: `${progress}%` }]} />
+      </View>
+      <Text style={styles.progressText}>{`${Math.round(progress)}% Complete`}</Text>
+    </View>
+  );
+};
+
+const TrainingVideo = ({ title, description, thumbnail, videoUrl, startTime, endTime, isCompleted, onVideoComplete, videoId }) => {
+  const handleVideoPress = () => {
+    // Format the URL with start and end times
+    // YouTube uses 't' or 'start' parameter for start time in seconds
+    // and 'end' parameter for end time in seconds
+    const formattedUrl = `${videoUrl}&start=${startTime}&end=${endTime}`;
+    Linking.openURL(formattedUrl);
+    
+    // Mark this video as completed after a short delay (simulating watching)
+    // In a real app, you might want to implement a more sophisticated way to track completion
+    setTimeout(() => {
+      onVideoComplete(videoId);
+    }, 2000);
+  };
+
+  return (
+    <TouchableOpacity 
+      style={[styles.videoCard, isCompleted && styles.completedVideoCard]} 
+      onPress={handleVideoPress}
+    >
+      <Image 
+        source={thumbnail}
+        style={styles.thumbnail}
+        resizeMode="cover"
+      />
+      <View style={styles.videoInfo}>
+        <Text style={styles.videoTitle}>{title}</Text>
+        <Text style={styles.videoDescription} numberOfLines={2}>
+          {description}
+        </Text>
+        <Text style={styles.timeStamp}>
+          {formatTime(startTime)} - {formatTime(endTime)}
+        </Text>
+        {isCompleted && (
+          <View style={styles.completedBadge}>
+            <Text style={styles.completedText}>✓ Completed</Text>
+          </View>
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+};
 
 // Helper function to format seconds into MM:SS format
 const formatTime = (seconds) => {
@@ -29,7 +82,6 @@ const Training = () => {
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState(0);
   const currentUser = auth().currentUser;
-  const isInitialMount = useRef(true);
   
   // Base YouTube video URL
   const baseVideoUrl = "https://www.youtube.com/watch?v=ErxKDbH-iiI";
@@ -227,230 +279,82 @@ const Training = () => {
     }
   ];
 
-  // Calculate progress increment per video
-  const progressPerVideo = 100 / trainingVideos.length;
-
-  // Load user's training progress when the screen comes into focus
-  useFocusEffect(
-    useCallback(() => {
-      console.log('Training screen focused - loading progress');
-      if (!isInitialMount.current) {
-        fetchTrainingProgress();
-      }
-      isInitialMount.current = false;
-      
-      return () => {
-        // Cleanup if needed
-      };
-    }, [])
-  );
-  
-  // Initial load on component mount
+  // Load user's completed videos from Firestore
   useEffect(() => {
-    console.log('Training component mounted - initial load');
-    fetchTrainingProgress();
-  }, []);
-  
-  // Function to fetch training progress
-  const fetchTrainingProgress = () => {
-    console.log('Fetching training progress...');
-    setLoading(true);
-    
     if (!currentUser) {
-      console.log('No current user found');
       setLoading(false);
       return;
     }
 
-    // Safety timeout to ensure loading state ends
-    const safetyTimeout = setTimeout(() => {
-      if (loading) {
-        console.log('Safety timeout triggered - forcing loading state to false');
-        setLoading(false);
-      }
-    }, 5000);
-
-    const userId = currentUser.phoneNumber || currentUser.uid;
-    if (!userId) {
-      console.error('No valid userId found in currentUser:', currentUser);
-      setLoading(false);
-      clearTimeout(safetyTimeout);
-      return;
-    }
-
-    console.log('Fetching training progress for user:', userId);
+    const userRef = firestore()
+      .collection('users')
+      .doc(currentUser.phoneNumber || currentUser.uid);
     
-    // Use the simplified API endpoint
-    fetch(`${API_BASE_URL}/api/users/${userId}/simple-training-progress`, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      }
-    })
-    .then(response => {
-      if (!response.ok) {
-        console.error(`HTTP error! Status: ${response.status}, StatusText: ${response.statusText}`);
-        return response.text().then(text => {
-          console.error('Error response body:', text);
-          throw new Error(`HTTP error! Status: ${response.status}`);
+    console.log('Setting up Firestore listener for user:', currentUser.phoneNumber || currentUser.uid);
+    
+    const unsubscribe = userRef
+      .collection('trainingProgress')
+      .onSnapshot(snapshot => {
+        const completedVideosData = {};
+        snapshot.forEach(doc => {
+          completedVideosData[doc.id] = doc.data().completed;
         });
-      }
-      return response.json();
-    })
-    .then(data => {
-      console.log('API Response:', JSON.stringify(data, null, 2));
-      
-      if (data && data.success) {
-        // Set overall progress percentage
-        const savedProgressPercentage = data.data.progress || 0;
-        console.log('Setting progress to:', savedProgressPercentage);
         
-        // Explicitly set state with the returned value
-        setProgress(parseFloat(savedProgressPercentage));
+        console.log('Loaded completed videos from Firestore:', completedVideosData);
+        setCompletedVideos(completedVideosData);
         
-        // Calculate which videos have been completed based on the progress percentage
-        if (savedProgressPercentage > 0) {
-          const completedVideosData = {};
-          const videosToComplete = Math.ceil((savedProgressPercentage / 100) * trainingVideos.length);
-          console.log(`Marking ${videosToComplete} videos as completed based on progress percentage of ${savedProgressPercentage}%`);
-          
-          for (let i = 1; i <= videosToComplete; i++) {
-            completedVideosData[i] = true;
-          }
-          
-          console.log('Setting completed videos:', completedVideosData);
-          setCompletedVideos(completedVideosData);
-        }
-      } else {
-        console.log('API response not successful or no data');
-        // Do not reset progress or completed videos on API failure
-      }
-    })
-    .catch(error => {
-      console.error("Error loading training progress:", error);
-      // Do not reset progress or completed videos on API failure
-    })
-    .finally(() => {
-      setLoading(false);
-      clearTimeout(safetyTimeout);
-    });
-  };
+        // Calculate progress percentage
+        const totalVideos = trainingVideos.length;
+        const completedCount = Object.values(completedVideosData).filter(Boolean).length;
+        const progressPercentage = (completedCount / totalVideos) * 100;
+        console.log(`Progress calculation: ${completedCount}/${totalVideos} = ${progressPercentage}%`);
+        setProgress(progressPercentage);
+        
+        setLoading(false);
+      }, error => {
+        console.error("Error loading training progress:", error);
+        setLoading(false);
+      });
+    
+    return () => unsubscribe();
+  }, [currentUser]);
 
   // Handle marking a video as completed
-  const handleVideoComplete = (videoId) => {
+  const handleVideoComplete = async (videoId) => {
     if (!currentUser) {
       Alert.alert('Error', 'You must be logged in to track progress');
       return;
     }
     
     const userId = currentUser.phoneNumber || currentUser.uid;
-    if (!userId) {
-      console.error('No valid userId found in currentUser:', currentUser);
-      return;
+    console.log(`Marking video ${videoId} as completed for user ${userId}`);
+    
+    try {
+      const userRef = firestore()
+        .collection('users')
+        .doc(userId);
+      
+      // First, ensure the user document exists
+      await userRef.set({
+        updatedAt: firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      
+      // Then update the training progress
+      await userRef
+        .collection('trainingProgress')
+        .doc(videoId.toString())
+        .set({
+          completed: true,
+          completedAt: firestore.FieldValue.serverTimestamp()
+        });
+      
+      console.log(`Successfully marked video ${videoId} as completed`);
+      
+      // We don't need to manually update local state as the Firestore listener will update it
+    } catch (error) {
+      console.error("Error updating training progress:", error);
+      Alert.alert('Error', 'Failed to update training progress. Please try again.');
     }
-    
-    // Update local state immediately
-    const updatedCompletedVideos = {
-      ...completedVideos,
-      [videoId]: true
-    };
-    setCompletedVideos(updatedCompletedVideos);
-    
-    // Count completed videos and calculate new progress
-    const completedCount = Object.keys(updatedCompletedVideos).length;
-    const newProgressPercentage = Math.min(completedCount * progressPerVideo, 100);
-    
-    console.log(`Video ${videoId} completed. New progress: ${newProgressPercentage.toFixed(2)}%`);
-    setProgress(newProgressPercentage);
-    
-    // Save to backend using simplified endpoint
-    fetch(`${API_BASE_URL}/api/users/${userId}/simple-training-progress`, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        progressPercentage: newProgressPercentage
-      })
-    })
-    .then(response => {
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-      return response.json();
-    })
-    .then(data => {
-      console.log('Progress saved successfully:', data);
-      
-      // Check if training is complete
-      if (newProgressPercentage >= 100) {
-        Alert.alert(
-          'Congratulations!',
-          'You have completed the training! You can now proceed to certification.',
-          [{ text: 'OK' }]
-        );
-      }
-    })
-    .catch(error => {
-      console.error("Error saving progress:", error);
-      // We keep the optimistic UI update even if the API call fails
-    });
-  };
-
-  const ProgressBar = ({ progress }) => {
-    return (
-      <View style={styles.progressBarContainer}>
-        <View style={styles.progressBarBackground}>
-          <View style={[styles.progressBarFill, { width: `${progress}%` }]} />
-        </View>
-        <Text style={styles.progressText}>{`${Math.round(progress)}% Complete`}</Text>
-      </View>
-    );
-  };
-
-  const TrainingVideo = ({ title, description, thumbnail, videoUrl, startTime, endTime, isCompleted, onVideoComplete, videoId }) => {
-    const handleVideoPress = () => {
-      // Format the URL with start and end times
-      // YouTube uses 't' or 'start' parameter for start time in seconds
-      // and 'end' parameter for end time in seconds
-      const formattedUrl = `${videoUrl}&start=${startTime}&end=${endTime}`;
-      Linking.openURL(formattedUrl);
-      
-      // Mark this video as completed after a short delay (simulating watching)
-      // In a real app, you might want to implement a more sophisticated way to track completion
-      setTimeout(() => {
-        onVideoComplete(videoId);
-      }, 2000);
-    };
-
-    return (
-      <TouchableOpacity 
-        style={[styles.videoCard, isCompleted && styles.completedVideoCard]} 
-        onPress={handleVideoPress}
-      >
-        <Image 
-          source={thumbnail}
-          style={styles.thumbnail}
-          resizeMode="cover"
-        />
-        <View style={styles.videoInfo}>
-          <Text style={styles.videoTitle}>{title}</Text>
-          <Text style={styles.videoDescription} numberOfLines={2}>
-            {description}
-          </Text>
-          <Text style={styles.timeStamp}>
-            {formatTime(startTime)} - {formatTime(endTime)}
-          </Text>
-          {isCompleted && (
-            <View style={styles.completedBadge}>
-              <Text style={styles.completedText}>✓ Completed</Text>
-            </View>
-          )}
-        </View>
-      </TouchableOpacity>
-    );
   };
 
   return (
@@ -534,14 +438,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F5F5',
   },
   progressBarBackground: {
-    height: 4,
-    borderRadius: 2,
+    height: 10,
     backgroundColor: '#E0E0E0',
+    borderRadius: 5,
+    overflow: 'hidden',
   },
   progressBarFill: {
-    height: 4,
-    borderRadius: 2,
+    height: '100%',
     backgroundColor: '#4CAF50',
+    borderRadius: 5,
   },
   progressText: {
     marginTop: 4,
