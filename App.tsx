@@ -87,9 +87,8 @@ const App: React.FC = () => {
   return (
     <NavigationContainer>
       {/* 
-        Note: In React Navigation v7, detachInactiveScreens is enabled by default
-        for better memory management. This is the default behavior and doesn't need to be
-        explicitly configured.
+        Navigation structure prevents users from returning to authentication screens
+        after login, as per the app's security design
       */}
       <Stack.Navigator
         initialRouteName={getInitialRouteName()}
@@ -98,15 +97,15 @@ const App: React.FC = () => {
         }}
       >
         {!user ? (
-          // Auth screens
-          <React.Fragment>
+          // Auth screens - only shown to unauthenticated users
+          <>
             <Stack.Screen name="SignUp" component={SignUpScreen} />
             <Stack.Screen name="SignIn" component={SignInScreen} />
             <Stack.Screen name="OTPVerification" component={OTPVerificationScreen} />
-          </React.Fragment>
+          </>
         ) : (
-          // App screens
-          <React.Fragment>
+          // App screens - only shown to authenticated users
+          <>
             <Stack.Screen name="UserTypeSelection" component={UserTypeSelectionScreen} />
             <Stack.Screen name="FirstResponder" component={FirstResponderScreen} />
             <Stack.Screen name="Home" component={Home} />
@@ -116,7 +115,7 @@ const App: React.FC = () => {
             <Stack.Screen name="ResponderAccount" component={ResponderAccount} />
             <Stack.Screen name="Help" component={Help} />
             <Stack.Screen name="Certification" component={Certification} />
-          </React.Fragment>
+          </>
         )}
       </Stack.Navigator>
     </NavigationContainer>

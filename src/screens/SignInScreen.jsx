@@ -135,20 +135,11 @@ const SignInScreen = () => {
           // We're ignoring errors here since Firebase authentication was successful
         });
 
-        // Show success message and navigate
-        Alert.alert(
-          'Success',
-          'Login successful!',
-          [{
-            text: 'OK',
-            onPress: () => {
-              navigation.navigate('OTPVerification', { 
-                phoneNumber: fullPhoneNumber,
-                isSignUp: false
-              });
-            }
-          }]
-        );
+        // Navigate directly to OTP verification without showing success message
+        navigation.navigate('OTPVerification', { 
+          phoneNumber: fullPhoneNumber,
+          isSignUp: false
+        });
       } catch (error) {
         console.error('==== Error in Sign In ====');
         console.error('Error type:', error.constructor.name);
