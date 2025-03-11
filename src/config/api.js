@@ -1,7 +1,5 @@
-// API configuration
+// API Configuration
+// Use 10.0.2.2 for Android emulator instead of localhost
+export const API_BASE_URL = 'http://10.0.2.2:5000'; // Android emulator special IP for localhost
 
-// For local development
-export const API_BASE_URL = 'http://localhost:5000';
-
-// For production - uncomment when deploying
-// export const API_BASE_URL = 'https://quickaid-api.example.com';
+// Other API-related configurations can be added here
