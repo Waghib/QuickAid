@@ -66,7 +66,7 @@ const OTPVerificationScreen = () => {
             if (userDoc.exists) {
               const userData = userDoc.data();
               
-              // First show alert
+              // Show alert and navigate after user confirms
               Alert.alert(
                 'Success',
                 'Phone number verified successfully!',
@@ -74,7 +74,7 @@ const OTPVerificationScreen = () => {
                   {
                     text: 'OK',
                     onPress: () => {
-                      // Then navigate based on role
+                      // Navigate based on role after alert confirmation
                       if (userData.role === 'responder') {
                         navigation.reset({
                           index: 0,

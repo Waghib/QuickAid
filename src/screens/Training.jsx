@@ -9,6 +9,7 @@ import {
   ScrollView,
   Linking,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import auth from '@react-native-firebase/auth';
@@ -289,6 +290,8 @@ const Training = () => {
       .collection('users')
       .doc(currentUser.phoneNumber || currentUser.uid);
     
+    console.log('Setting up Firestore listener for user:', currentUser.phoneNumber || currentUser.uid);
+    
     const unsubscribe = userRef
       .collection('trainingProgress')
       .onSnapshot(snapshot => {
@@ -297,12 +300,14 @@ const Training = () => {
           completedVideosData[doc.id] = doc.data().completed;
         });
         
+        console.log('Loaded completed videos from Firestore:', completedVideosData);
         setCompletedVideos(completedVideosData);
         
         // Calculate progress percentage
         const totalVideos = trainingVideos.length;
         const completedCount = Object.values(completedVideosData).filter(Boolean).length;
         const progressPercentage = (completedCount / totalVideos) * 100;
+        console.log(`Progress calculation: ${completedCount}/${totalVideos} = ${progressPercentage}%`);
         setProgress(progressPercentage);
         
         setLoading(false);
@@ -316,13 +321,25 @@ const Training = () => {
 
   // Handle marking a video as completed
   const handleVideoComplete = async (videoId) => {
-    if (!currentUser) return;
+    if (!currentUser) {
+      Alert.alert('Error', 'You must be logged in to track progress');
+      return;
+    }
+    
+    const userId = currentUser.phoneNumber || currentUser.uid;
+    console.log(`Marking video ${videoId} as completed for user ${userId}`);
     
     try {
       const userRef = firestore()
         .collection('users')
-        .doc(currentUser.phoneNumber || currentUser.uid);
+        .doc(userId);
       
+      // First, ensure the user document exists
+      await userRef.set({
+        updatedAt: firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      
+      // Then update the training progress
       await userRef
         .collection('trainingProgress')
         .doc(videoId.toString())
@@ -331,13 +348,12 @@ const Training = () => {
           completedAt: firestore.FieldValue.serverTimestamp()
         });
       
-      // Update local state
-      setCompletedVideos(prev => ({
-        ...prev,
-        [videoId]: true
-      }));
+      console.log(`Successfully marked video ${videoId} as completed`);
+      
+      // We don't need to manually update local state as the Firestore listener will update it
     } catch (error) {
       console.error("Error updating training progress:", error);
+      Alert.alert('Error', 'Failed to update training progress. Please try again.');
     }
   };
 

@@ -160,29 +160,19 @@ const SignUpScreen = ({ route }) => {
               name: name,
               contactInfo: fullPhoneNumber,
               latitude: 0,
-              longitude: 0,
-              userType: 'emergency_user'
+              longitude: 0
             })
           }).catch(error => {
             console.error('Fetch error:', error);
             // We're ignoring errors here since we know the user is created server-side
           });
           
-          // Proceed immediately without waiting for response
-          Alert.alert(
-            'Success', 
-            'Account created successfully!',
-            [{
-              text: 'OK',
-              onPress: () => {
-                navigation.navigate('OTPVerification', { 
-                  phoneNumber: fullPhoneNumber,
-                  name: name,
-                  isSignUp: true
-                });
-              }
-            }]
-          );
+          // Navigate directly to OTP verification without showing success message
+          navigation.navigate('OTPVerification', { 
+            phoneNumber: fullPhoneNumber,
+            name: name,
+            isSignUp: true
+          });
         } catch (outerError) {
           // Handle any errors in the try block
           Alert.alert('Error', 'Outer error: ' + outerError.message, [{ 

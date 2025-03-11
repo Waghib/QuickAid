@@ -24,8 +24,7 @@ const User = sequelize.define('User', {
     allowNull: false
   },
   userType: {
-    type: DataTypes.ENUM('emergency_user', 'first_responder'),
-    allowNull: false
+    type: DataTypes.ENUM('emergency_user', 'first_responder')
   }
 }, {
   timestamps: true
