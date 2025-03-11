@@ -17,8 +17,30 @@ const UserTypeSelectionScreen = () => {
   useFocusEffect(
     React.useCallback(() => {
       const onBackPress = () => {
-        // Navigate to SignIn screen instead of exiting the app
-        navigation.navigate('SignIn');
+        // Show confirmation dialog to sign out instead of navigating to SignIn
+        Alert.alert(
+          'Sign Out',
+          'Do you want to sign out?',
+          [
+            {
+              text: 'Cancel',
+              style: 'cancel',
+            },
+            {
+              text: 'Sign Out',
+              onPress: async () => {
+                try {
+                  await auth().signOut();
+                  // No need to navigate - App.tsx will handle navigation after sign out
+                } catch (error) {
+                  console.error('Error signing out:', error);
+                  Alert.alert('Error', 'Failed to sign out. Please try again.');
+                }
+              },
+            },
+          ],
+          { cancelable: true }
+        );
         return true; // Prevent default behavior (app exit)
       };
 

@@ -168,9 +168,12 @@ app.get('/api/users/:userId/training-progress', async (req, res) => {
   try {
     const { userId } = req.params;
     
+    console.log(`API - Get training progress request for user: ${userId}`);
+    
     // Check if user exists
     const user = await User.findByPk(userId);
     if (!user) {
+      console.log(`API - User not found: ${userId}`);
       return res.status(404).json({ success: false, message: 'User not found' });
     }
     
@@ -179,16 +182,26 @@ app.get('/api/users/:userId/training-progress', async (req, res) => {
       order: [['order', 'ASC']]
     });
     
+    console.log(`API - Found ${videos.length} training videos`);
+    
     // Get user's progress
     const progress = await TrainingProgress.findAll({
       where: { userId },
       attributes: ['videoId', 'completed', 'completedAt']
     });
     
+    console.log(`API - Found ${progress.length} progress records for user: ${userId}`);
+    // Log each progress record for debugging
+    progress.forEach(p => {
+      console.log(`API - Progress record: videoId=${p.videoId}, completed=${p.completed}`);
+    });
+    
     // Calculate overall progress percentage
     const totalVideos = videos.length;
     const completedVideos = progress.filter(p => p.completed).length;
     const progressPercentage = totalVideos > 0 ? (completedVideos / totalVideos) * 100 : 0;
+    
+    console.log(`API - Overall progress: ${completedVideos}/${totalVideos} = ${progressPercentage}%`);
     
     res.status(200).json({
       success: true,
@@ -214,17 +227,23 @@ app.post('/api/users/:userId/training-progress', async (req, res) => {
     const { userId } = req.params;
     const { videoId, completed } = req.body;
     
+    console.log(`API - Update training progress request: userId=${userId}, videoId=${videoId}, completed=${completed}`);
+    
     // Check if user exists
     const user = await User.findByPk(userId);
     if (!user) {
+      console.log(`API - User not found: ${userId}`);
       return res.status(404).json({ success: false, message: 'User not found' });
     }
     
     // Check if video exists
     const video = await TrainingVideo.findByPk(videoId);
     if (!video) {
+      console.log(`API - Video not found: ${videoId}`);
       return res.status(404).json({ success: false, message: 'Training video not found' });
     }
+    
+    console.log(`API - Found user and video, proceeding to update progress`);
     
     // Find or create progress record
     const [progress, created] = await TrainingProgress.findOrCreate({
@@ -234,6 +253,8 @@ app.post('/api/users/:userId/training-progress', async (req, res) => {
         completedAt: completed ? new Date() : null
       }
     });
+    
+    console.log(`API - Progress record ${created ? 'created' : 'found'}: ${JSON.stringify(progress.toJSON())}`);
     
     // If record already exists, update it
     if (!created) {
@@ -245,6 +266,7 @@ app.post('/api/users/:userId/training-progress', async (req, res) => {
       }
       
       await progress.save();
+      console.log(`API - Updated existing progress record: ${JSON.stringify(progress.toJSON())}`);
     }
     
     // Update certification progress if needed
@@ -262,6 +284,8 @@ app.post('/api/users/:userId/training-progress', async (req, res) => {
       const completedVideos = allProgress.filter(p => p.completed).length;
       const progressPercentage = totalVideos > 0 ? (completedVideos / totalVideos) * 100 : 0;
       
+      console.log(`API - Overall progress: ${completedVideos}/${totalVideos} = ${progressPercentage}%`);
+      
       // Update or create certification record
       const [certification, certCreated] = await Certification.findOrCreate({
         where: { userId },
@@ -275,6 +299,9 @@ app.post('/api/users/:userId/training-progress', async (req, res) => {
         certification.progress = progressPercentage;
         certification.completedTraining = progressPercentage === 100;
         await certification.save();
+        console.log(`API - Updated certification progress: ${progressPercentage}%`);
+      } else {
+        console.log(`API - Created new certification record with progress: ${progressPercentage}%`);
       }
     }
     
@@ -510,6 +537,107 @@ app.put('/api/users/:userId/type', async (req, res) => {
   } catch (error) {
     console.error('Error updating user type:', error);
     res.status(500).json({ success: false, message: 'Failed to update user type', error: error.message });
+  }
+});
+
+// Get simplified training progress
+app.get('/api/users/:userId/simple-training-progress', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    console.log(`API - Get simple training progress for user: ${userId}`);
+    
+    // Check if user exists
+    const user = await User.findByPk(userId);
+    if (!user) {
+      console.log(`API - User not found: ${userId}`);
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    
+    // Get user's certification record which stores overall progress
+    const certification = await Certification.findOne({
+      where: { userId }
+    });
+    
+    // Get progress percentage from certification or default to 0
+    const progressPercentage = certification ? certification.progress : 0;
+    
+    console.log(`API - User progress: ${progressPercentage}%`);
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        progress: progressPercentage,
+        completedTraining: certification ? certification.completedTraining : false
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching training progress:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch training progress', error: error.message });
+  }
+});
+
+// Update simplified training progress
+app.post('/api/users/:userId/simple-training-progress', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { progressPercentage } = req.body;
+    
+    console.log(`API - Update simple training progress: userId=${userId}, progressPercentage=${progressPercentage}`);
+    
+    // Check if user exists
+    const user = await User.findByPk(userId);
+    if (!user) {
+      console.log(`API - User not found: ${userId}`);
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    
+    // Find or create certification record for the user
+    const [certification, certCreated] = await Certification.findOrCreate({
+      where: { userId },
+      defaults: {
+        completedTraining: progressPercentage >= 100,
+        progress: progressPercentage || 0
+      }
+    });
+    
+    if (certCreated) {
+      console.log(`API - Created new certification record with progress: ${progressPercentage}%`);
+    } else {
+      // Update progress in certification
+      certification.progress = progressPercentage || certification.progress;
+      certification.completedTraining = progressPercentage >= 100;
+      
+      // Save changes to database
+      await certification.save();
+      
+      console.log(`API - Updated certification progress: ${progressPercentage}%`);
+    }
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        progress: certification.progress,
+        completedTraining: certification.completedTraining
+      }
+    });
+  } catch (error) {
+    console.error('Error updating training progress:', error);
+    res.status(500).json({ success: false, message: 'Failed to update training progress', error: error.message });
+  }
+});
+
+// Run SQL query to set metadata to JSONB type
+app.get('/api/update-metadata-column', async (req, res) => {
+  try {
+    await sequelize.query(`
+      ALTER TABLE "Certifications" 
+      ALTER COLUMN "metadata" TYPE JSONB USING "metadata"::JSONB;
+    `);
+    res.status(200).json({ success: true, message: 'Metadata column updated to JSONB type' });
+  } catch (error) {
+    console.error('Error updating metadata column:', error);
+    res.status(500).json({ success: false, message: 'Failed to update metadata column' });
   }
 });
 

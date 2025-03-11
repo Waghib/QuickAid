@@ -25,6 +25,11 @@ const Certification = sequelize.define('Certification', {
     allowNull: false,
     defaultValue: 0
   },
+  metadata: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    defaultValue: {}
+  },
   requestedAt: {
     type: DataTypes.DATE,
     allowNull: true
