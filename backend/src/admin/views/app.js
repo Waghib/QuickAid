@@ -567,7 +567,7 @@ async function loadTrainingVideos() {
         <td>${video.id}</td>
         <td>${video.title}</td>
         <td>${video.description || 'No description'}</td>
-        <td><a href="${video.url}" target="_blank">${video.url.substring(0, 30)}...</a></td>
+        <td><a href="${video.videoUrl}" target="_blank">${video.videoUrl.substring(0, 30)}...</a></td>
         <td>${video.order}</td>
         <td>
           <button class="btn btn-sm btn-primary edit-video-btn" data-id="${video.id}">
@@ -623,7 +623,8 @@ function editVideo(videoId, videos) {
   document.getElementById('video-id').value = video.id;
   document.getElementById('video-title').value = video.title;
   document.getElementById('video-description').value = video.description || '';
-  document.getElementById('video-url').value = video.url;
+  document.getElementById('video-url').value = video.videoUrl;
+  document.getElementById('video-thumbnail').value = video.thumbnailUrl || '';
   document.getElementById('video-order').value = video.order;
 
   videoModal.show();
@@ -636,6 +637,7 @@ async function saveVideo() {
     const title = document.getElementById('video-title').value;
     const description = document.getElementById('video-description').value;
     const url = document.getElementById('video-url').value;
+    const thumbnail = document.getElementById('video-thumbnail').value;
     const order = document.getElementById('video-order').value;
 
     if (!title || !url) {
@@ -646,7 +648,8 @@ async function saveVideo() {
     const videoData = {
       title,
       description,
-      url,
+      videoUrl: url,
+      thumbnailUrl: thumbnail,
       order: parseInt(order, 10)
     };
 

@@ -239,16 +239,17 @@ router.get('/api/training-videos', async (req, res) => {
 // Create a new training video
 router.post('/api/training-videos', async (req, res) => {
   try {
-    const { title, description, url, order } = req.body;
+    const { title, description, videoUrl, thumbnailUrl, order } = req.body;
     
-    if (!title || !url) {
-      return res.status(400).json({ error: 'Title and URL are required' });
+    if (!title || !videoUrl) {
+      return res.status(400).json({ error: 'Title and Video URL are required' });
     }
     
     const trainingVideo = await TrainingVideo.create({
       title,
       description,
-      url,
+      videoUrl,
+      thumbnailUrl,
       order: order || 0
     });
     
@@ -262,7 +263,7 @@ router.post('/api/training-videos', async (req, res) => {
 // Update a training video
 router.put('/api/training-videos/:id', async (req, res) => {
   try {
-    const { title, description, url, order } = req.body;
+    const { title, description, videoUrl, thumbnailUrl, order } = req.body;
     
     const trainingVideo = await TrainingVideo.findByPk(req.params.id);
     
@@ -272,7 +273,8 @@ router.put('/api/training-videos/:id', async (req, res) => {
     
     trainingVideo.title = title || trainingVideo.title;
     trainingVideo.description = description || trainingVideo.description;
-    trainingVideo.url = url || trainingVideo.url;
+    trainingVideo.videoUrl = videoUrl || trainingVideo.videoUrl;
+    trainingVideo.thumbnailUrl = thumbnailUrl || trainingVideo.thumbnailUrl;
     trainingVideo.order = order !== undefined ? order : trainingVideo.order;
     
     await trainingVideo.save();
