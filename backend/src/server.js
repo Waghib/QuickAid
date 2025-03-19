@@ -27,6 +27,9 @@ app.use((req, res, next) => {
 const sequelize = require('./config/database');
 const { User, EmergencyUser, FirstResponder, EmergencyRequest, Feedback, Notification, Certification, TrainingProgress, TrainingVideo } = require('./models');
 
+// Import admin router
+const adminRouter = require('./admin/router');
+
 // Test DB Connection and Sync Models
 sequelize.authenticate()
     .then(() => {
@@ -45,6 +48,9 @@ sequelize.authenticate()
 app.get('/', (req, res) => {
     res.json({ message: 'Welcome to QuickAid API' });
 });
+
+// Admin routes
+app.use('/admin', adminRouter);
 
 // Create new user
 app.post('/api/users', async (req, res) => {

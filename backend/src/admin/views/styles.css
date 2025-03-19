@@ -1,0 +1,250 @@
+body {
+  font-size: .875rem;
+  background-color: #f8f9fa;
+}
+
+.feather {
+  width: 16px;
+  height: 16px;
+  vertical-align: text-bottom;
+}
+
+/*
+ * Sidebar
+ */
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 100; /* Behind the navbar */
+  padding: 48px 0 0; /* Height of navbar */
+  box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+}
+
+@media (max-width: 767.98px) {
+  .sidebar {
+    top: 5rem;
+  }
+}
+
+.sidebar-sticky {
+  position: relative;
+  top: 0;
+  height: calc(100vh - 48px);
+  padding-top: .5rem;
+  overflow-x: hidden;
+  overflow-y: auto; /* Scrollable contents if viewport is shorter than content. */
+}
+
+.sidebar .nav-link {
+  font-weight: 500;
+  color: #adb5bd;
+  padding: .75rem 1rem;
+  margin-bottom: .25rem;
+  border-radius: .25rem;
+}
+
+.sidebar .nav-link:hover {
+  color: #fff;
+  background-color: rgba(255, 255, 255, .1);
+}
+
+.sidebar .nav-link.active {
+  color: #fff;
+  background-color: rgba(255, 255, 255, .2);
+}
+
+.sidebar .nav-link .feather {
+  margin-right: 4px;
+  color: #999;
+}
+
+.sidebar .nav-link.active .feather {
+  color: inherit;
+}
+
+.sidebar-heading {
+  font-size: .75rem;
+  text-transform: uppercase;
+}
+
+/*
+ * Navbar
+ */
+
+.navbar-brand {
+  padding-top: .75rem;
+  padding-bottom: .75rem;
+  font-size: 1rem;
+  background-color: rgba(0, 0, 0, .25);
+  box-shadow: inset -1px 0 0 rgba(0, 0, 0, .25);
+}
+
+.navbar .navbar-toggler {
+  top: .25rem;
+  right: 1rem;
+}
+
+.navbar .form-control {
+  padding: .75rem 1rem;
+  border-width: 0;
+  border-radius: 0;
+}
+
+.form-control-dark {
+  color: #fff;
+  background-color: rgba(255, 255, 255, .1);
+  border-color: rgba(255, 255, 255, .1);
+}
+
+.form-control-dark:focus {
+  border-color: transparent;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, .25);
+}
+
+/* Page content */
+.page-content {
+  display: none;
+}
+
+.page-content.active {
+  display: block;
+}
+
+/* Cards */
+.card {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  margin-bottom: 1.5rem;
+}
+
+.card-header {
+  background-color: rgba(0, 0, 0, 0.03);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+/* Tables */
+.table-responsive {
+  overflow-x: auto;
+}
+
+.table th {
+  font-weight: 600;
+}
+
+/* Status badges */
+.badge-pending {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.badge-approved {
+  background-color: #28a745;
+  color: #fff;
+}
+
+.badge-rejected {
+  background-color: #dc3545;
+  color: #fff;
+}
+
+.badge-completed {
+  background-color: #28a745;
+  color: #fff;
+}
+
+.badge-accepted {
+  background-color: #17a2b8;
+  color: #fff;
+}
+
+.badge-cancelled {
+  background-color: #6c757d;
+  color: #fff;
+}
+
+/* Progress bars */
+.progress {
+  height: 0.5rem;
+}
+
+/* Map container */
+.map-container {
+  height: 300px;
+  margin-bottom: 1rem;
+}
+
+/* Pagination */
+.pagination {
+  margin-bottom: 0;
+}
+
+/* Modal */
+.modal-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.modal-footer {
+  background-color: #f8f9fa;
+  border-top: 1px solid #dee2e6;
+}
+
+/* User details */
+.user-avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 1rem;
+}
+
+.user-info {
+  margin-bottom: 1.5rem;
+}
+
+.user-info h5 {
+  margin-bottom: 0.5rem;
+}
+
+.user-info p {
+  margin-bottom: 0.25rem;
+}
+
+/* Emergency request details */
+.request-map {
+  height: 300px;
+  margin-bottom: 1rem;
+}
+
+.request-info {
+  margin-bottom: 1.5rem;
+}
+
+.request-info h5 {
+  margin-bottom: 0.5rem;
+}
+
+.request-info p {
+  margin-bottom: 0.25rem;
+}
+
+/* Training video */
+.video-thumbnail {
+  width: 120px;
+  height: 68px;
+  object-fit: cover;
+  border-radius: 0.25rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 767.98px) {
+  .card-deck {
+    display: block;
+  }
+  
+  .card-deck .card {
+    margin-bottom: 1rem;
+  }
+}
