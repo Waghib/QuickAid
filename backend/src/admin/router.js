@@ -119,11 +119,55 @@ router.get('/api/recent-emergency-requests', async (req, res) => {
 // Get all users
 router.get('/api/users', async (req, res) => {
   try {
+    const { search, type } = req.query;
+    let where = {};
+    
+    // Apply search filter if provided
+    if (search) {
+      where = {
+        [Op.or]: [
+          { name: { [Op.iLike]: `%${search}%` } },
+          { contactInfo: { [Op.iLike]: `%${search}%` } }
+        ]
+      };
+    }
+    
+    // Get all users with optional search filter
     const users = await User.findAll({
+      where,
       include: [
         { model: Certification, required: false }
-      ]
+      ],
+      order: [['name', 'ASC']] // Sort by name in ascending order
     });
+    
+    // If type filter is provided, filter the results
+    if (type) {
+      let filteredUsers = [];
+      
+      if (type === 'emergency') {
+        // Get all emergency user IDs
+        const emergencyUsers = await EmergencyUser.findAll({
+          attributes: ['userId']
+        });
+        const emergencyUserIds = emergencyUsers.map(user => user.userId);
+        
+        // Filter users that are emergency users
+        filteredUsers = users.filter(user => emergencyUserIds.includes(user.id));
+      } else if (type === 'responder') {
+        // Get all first responder IDs
+        const firstResponders = await FirstResponder.findAll({
+          attributes: ['userId']
+        });
+        const responderUserIds = firstResponders.map(user => user.userId);
+        
+        // Filter users that are first responders
+        filteredUsers = users.filter(user => responderUserIds.includes(user.id));
+      }
+      
+      return res.json(filteredUsers);
+    }
+    
     res.json(users);
   } catch (error) {
     console.error('Error fetching users:', error);
@@ -222,10 +266,20 @@ router.get('/api/emergency-requests/:id', async (req, res) => {
 // Get all certifications
 router.get('/api/certifications', async (req, res) => {
   try {
+    const { status } = req.query;
+    const where = {};
+    
+    // Apply status filter if provided
+    if (status) {
+      where.status = status;
+    }
+    
     const certifications = await Certification.findAll({
+      where,
       include: [
         { model: User, required: true }
-      ]
+      ],
+      order: [['createdAt', 'DESC']]
     });
     res.json(certifications);
   } catch (error) {
