@@ -32,17 +32,39 @@ document.addEventListener('DOMContentLoaded', () => {
     loadPageData(currentPage);
   });
 
+  // Set up user type filter
+  document.getElementById('user-type-filter').addEventListener('change', () => {
+    loadUsers();
+  });
+
   // Set up users search
   document.getElementById('users-search-btn').addEventListener('click', () => {
     loadUsers();
   });
 
-  // Set up emergency requests filter
+  // Set up users search with Enter key
+  document.getElementById('users-search').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      loadUsers();
+    }
+  });
+
+  // Set up emergency requests filter dropdown to load instantly on change
+  document.getElementById('request-status-filter').addEventListener('change', () => {
+    loadEmergencyRequests();
+  });
+
+  // Set up emergency requests filter button (keeping for backward compatibility)
   document.getElementById('request-filter-btn').addEventListener('click', () => {
     loadEmergencyRequests();
   });
 
-  // Set up certification filter
+  // Set up certification filter dropdown to load instantly on change
+  document.getElementById('certification-status-filter').addEventListener('change', () => {
+    loadCertifications();
+  });
+
+  // Set up certification filter button (keeping for backward compatibility)
   document.getElementById('certification-filter-btn').addEventListener('click', () => {
     loadCertifications();
   });
@@ -183,31 +205,26 @@ function createEmergencyRequestsChart(data) {
 // Load recent emergency requests
 async function loadRecentEmergencyRequests() {
   try {
-    const response = await fetch('/admin/api/emergency-requests');
+    const response = await fetch('/admin/api/recent-emergency-requests');
     const data = await response.json();
-
-    // Sort by time (newest first) and take the first 5
-    const recentRequests = data
-      .sort((a, b) => new Date(b.time) - new Date(a.time))
-      .slice(0, 5);
 
     // Update the table
     const tableBody = document.getElementById('recent-requests-table');
     tableBody.innerHTML = '';
 
-    if (recentRequests.length === 0) {
+    if (data.length === 0) {
       const row = document.createElement('tr');
       row.innerHTML = '<td colspan="4" class="text-center">No emergency requests found</td>';
       tableBody.appendChild(row);
       return;
     }
 
-    recentRequests.forEach(request => {
+    data.forEach(request => {
       const row = document.createElement('tr');
       row.innerHTML = `
-        <td>${request.requestId.substring(0, 8)}...</td>
         <td>${request.emergencyType}</td>
         <td><span class="badge bg-${getStatusBadgeClass(request.status)}">${request.status}</span></td>
+        <td>${request.EmergencyUser && request.EmergencyUser.User ? request.EmergencyUser.User.name : 'N/A'}</td>
         <td>${new Date(request.time).toLocaleString()}</td>
       `;
       tableBody.appendChild(row);
@@ -222,10 +239,21 @@ async function loadRecentEmergencyRequests() {
 async function loadUsers() {
   try {
     const searchQuery = document.getElementById('users-search').value;
+    const userType = document.getElementById('user-type-filter').value;
+    
     let url = '/admin/api/users';
+    const params = new URLSearchParams();
     
     if (searchQuery) {
-      url += `?search=${encodeURIComponent(searchQuery)}`;
+      params.append('search', searchQuery);
+    }
+    
+    if (userType) {
+      params.append('type', userType);
+    }
+    
+    if (params.toString()) {
+      url += `?${params.toString()}`;
     }
     
     const response = await fetch(url);
@@ -237,7 +265,7 @@ async function loadUsers() {
 
     if (data.length === 0) {
       const row = document.createElement('tr');
-      row.innerHTML = '<td colspan="6" class="text-center">No users found</td>';
+      row.innerHTML = '<td colspan="5" class="text-center">No users found</td>';
       tableBody.appendChild(row);
       return;
     }
@@ -245,7 +273,6 @@ async function loadUsers() {
     data.forEach(user => {
       const row = document.createElement('tr');
       row.innerHTML = `
-        <td>${user.id.substring(0, 8)}...</td>
         <td>${user.name}</td>
         <td>${user.contactInfo}</td>
         <td>${user.userType || 'Not set'}</td>
@@ -291,7 +318,6 @@ async function viewUserDetails(userId) {
         <div class="col-md-6">
           <div class="user-info">
             <h5>Basic Information</h5>
-            <p><strong>ID:</strong> ${user.id}</p>
             <p><strong>Name:</strong> ${user.name}</p>
             <p><strong>Contact:</strong> ${user.contactInfo}</p>
             <p><strong>User Type:</strong> ${user.userType || 'Not set'}</p>
@@ -348,7 +374,7 @@ async function loadEmergencyRequests() {
 
     if (data.length === 0) {
       const row = document.createElement('tr');
-      row.innerHTML = '<td colspan="7" class="text-center">No emergency requests found</td>';
+      row.innerHTML = '<td colspan="6" class="text-center">No emergency requests found</td>';
       tableBody.appendChild(row);
       return;
     }
@@ -356,11 +382,10 @@ async function loadEmergencyRequests() {
     data.forEach(request => {
       const row = document.createElement('tr');
       row.innerHTML = `
-        <td>${request.requestId.substring(0, 8)}...</td>
         <td>${request.emergencyType}</td>
         <td><span class="badge bg-${getStatusBadgeClass(request.status)}">${request.status}</span></td>
-        <td>${request.EmergencyUser ? request.EmergencyUser.emergencyUserId.substring(0, 8) + '...' : 'N/A'}</td>
-        <td>${request.FirstResponder ? request.FirstResponder.firstResponderId.substring(0, 8) + '...' : 'N/A'}</td>
+        <td>${request.EmergencyUser && request.EmergencyUser.User ? request.EmergencyUser.User.name : 'N/A'}</td>
+        <td>${request.FirstResponder && request.FirstResponder.User ? request.FirstResponder.User.name : 'N/A'}</td>
         <td>${new Date(request.time).toLocaleString()}</td>
         <td>
           <button class="btn btn-sm btn-primary view-request-btn" data-id="${request.requestId}">
@@ -398,7 +423,6 @@ async function viewRequestDetails(requestId) {
         <div class="col-md-6">
           <div class="request-info">
             <h5>Basic Information</h5>
-            <p><strong>ID:</strong> ${request.requestId}</p>
             <p><strong>Type:</strong> ${request.emergencyType}</p>
             <p><strong>Status:</strong> <span class="badge bg-${getStatusBadgeClass(request.status)}">${request.status}</span></p>
             <p><strong>Time:</strong> ${new Date(request.time).toLocaleString()}</p>
@@ -414,8 +438,8 @@ async function viewRequestDetails(requestId) {
           </div>
           <div class="request-info">
             <h5>Users</h5>
-            <p><strong>Emergency User:</strong> ${request.EmergencyUser ? request.EmergencyUser.emergencyUserId : 'N/A'}</p>
-            <p><strong>First Responder:</strong> ${request.FirstResponder ? request.FirstResponder.firstResponderId : 'N/A'}</p>
+            <p><strong>Emergency User:</strong> ${request.EmergencyUser && request.EmergencyUser.User ? request.EmergencyUser.User.name : 'N/A'}</p>
+            <p><strong>First Responder:</strong> ${request.FirstResponder && request.FirstResponder.User ? request.FirstResponder.User.name : 'N/A'}</p>
           </div>
         </div>
       </div>
@@ -460,7 +484,7 @@ async function loadCertifications() {
 
     if (data.length === 0) {
       const row = document.createElement('tr');
-      row.innerHTML = '<td colspan="6" class="text-center">No certifications found</td>';
+      row.innerHTML = '<td colspan="5" class="text-center">No certifications found</td>';
       tableBody.appendChild(row);
       return;
     }
@@ -468,7 +492,6 @@ async function loadCertifications() {
     data.forEach(certification => {
       const row = document.createElement('tr');
       row.innerHTML = `
-        <td>${certification.userId.substring(0, 8)}...</td>
         <td>${certification.User ? certification.User.name : 'Unknown'}</td>
         <td><span class="badge bg-${getStatusBadgeClass(certification.status)}">${certification.status || 'Not set'}</span></td>
         <td>
@@ -556,7 +579,7 @@ async function loadTrainingVideos() {
 
     if (data.length === 0) {
       const row = document.createElement('tr');
-      row.innerHTML = '<td colspan="6" class="text-center">No training videos found</td>';
+      row.innerHTML = '<td colspan="5" class="text-center">No training videos found</td>';
       tableBody.appendChild(row);
       return;
     }
@@ -564,7 +587,6 @@ async function loadTrainingVideos() {
     data.forEach(video => {
       const row = document.createElement('tr');
       row.innerHTML = `
-        <td>${video.id}</td>
         <td>${video.title}</td>
         <td>${video.description || 'No description'}</td>
         <td><a href="${video.videoUrl}" target="_blank">${video.videoUrl.substring(0, 30)}...</a></td>
