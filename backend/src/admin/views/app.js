@@ -32,17 +32,39 @@ document.addEventListener('DOMContentLoaded', () => {
     loadPageData(currentPage);
   });
 
+  // Set up user type filter
+  document.getElementById('user-type-filter').addEventListener('change', () => {
+    loadUsers();
+  });
+
   // Set up users search
   document.getElementById('users-search-btn').addEventListener('click', () => {
     loadUsers();
   });
 
-  // Set up emergency requests filter
+  // Set up users search with Enter key
+  document.getElementById('users-search').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      loadUsers();
+    }
+  });
+
+  // Set up emergency requests filter dropdown to load instantly on change
+  document.getElementById('request-status-filter').addEventListener('change', () => {
+    loadEmergencyRequests();
+  });
+
+  // Set up emergency requests filter button (keeping for backward compatibility)
   document.getElementById('request-filter-btn').addEventListener('click', () => {
     loadEmergencyRequests();
   });
 
-  // Set up certification filter
+  // Set up certification filter dropdown to load instantly on change
+  document.getElementById('certification-status-filter').addEventListener('change', () => {
+    loadCertifications();
+  });
+
+  // Set up certification filter button (keeping for backward compatibility)
   document.getElementById('certification-filter-btn').addEventListener('click', () => {
     loadCertifications();
   });
@@ -217,10 +239,21 @@ async function loadRecentEmergencyRequests() {
 async function loadUsers() {
   try {
     const searchQuery = document.getElementById('users-search').value;
+    const userType = document.getElementById('user-type-filter').value;
+    
     let url = '/admin/api/users';
+    const params = new URLSearchParams();
     
     if (searchQuery) {
-      url += `?search=${encodeURIComponent(searchQuery)}`;
+      params.append('search', searchQuery);
+    }
+    
+    if (userType) {
+      params.append('type', userType);
+    }
+    
+    if (params.toString()) {
+      url += `?${params.toString()}`;
     }
     
     const response = await fetch(url);

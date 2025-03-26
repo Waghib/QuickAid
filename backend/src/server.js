@@ -34,7 +34,7 @@ const adminRouter = require('./admin/router');
 sequelize.authenticate()
     .then(() => {
         console.log('Database connected successfully');
-        return sequelize.sync({ force: true });
+        return sequelize.sync({ force: false });
     })
     .then(() => {
         console.log('Database synced successfully');
