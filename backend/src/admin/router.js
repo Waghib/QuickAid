@@ -87,14 +87,87 @@ router.get('/api/stats', async (req, res) => {
   }
 });
 
+// Get recent emergency requests for dashboard
+router.get('/api/recent-emergency-requests', async (req, res) => {
+  try {
+    const requests = await EmergencyRequest.findAll({
+      include: [
+        { 
+          model: EmergencyUser,
+          include: [
+            { model: User }
+          ]
+        },
+        { 
+          model: FirstResponder,
+          include: [
+            { model: User }
+          ]
+        }
+      ],
+      order: [['createdAt', 'DESC']],
+      limit: 5
+    });
+    
+    res.json(requests);
+  } catch (error) {
+    console.error('Error fetching recent emergency requests:', error);
+    res.status(500).json({ error: 'Failed to fetch recent emergency requests' });
+  }
+});
+
 // Get all users
 router.get('/api/users', async (req, res) => {
   try {
+    const { search, type } = req.query;
+    let where = {};
+    
+    // Apply search filter if provided
+    if (search) {
+      where = {
+        [Op.or]: [
+          { name: { [Op.iLike]: `%${search}%` } },
+          { contactInfo: { [Op.iLike]: `%${search}%` } }
+        ]
+      };
+    }
+    
+    // Get all users with optional search filter
     const users = await User.findAll({
+      where,
       include: [
         { model: Certification, required: false }
-      ]
+      ],
+      order: [['name', 'ASC']] // Sort by name in ascending order
     });
+    
+    // If type filter is provided, filter the results
+    if (type) {
+      let filteredUsers = [];
+      
+      if (type === 'emergency') {
+        // Get all emergency user IDs
+        const emergencyUsers = await EmergencyUser.findAll({
+          attributes: ['userId']
+        });
+        const emergencyUserIds = emergencyUsers.map(user => user.userId);
+        
+        // Filter users that are emergency users
+        filteredUsers = users.filter(user => emergencyUserIds.includes(user.id));
+      } else if (type === 'responder') {
+        // Get all first responder IDs
+        const firstResponders = await FirstResponder.findAll({
+          attributes: ['userId']
+        });
+        const responderUserIds = firstResponders.map(user => user.userId);
+        
+        // Filter users that are first responders
+        filteredUsers = users.filter(user => responderUserIds.includes(user.id));
+      }
+      
+      return res.json(filteredUsers);
+    }
+    
     res.json(users);
   } catch (error) {
     console.error('Error fetching users:', error);
@@ -125,13 +198,33 @@ router.get('/api/users/:id', async (req, res) => {
 // Get all emergency requests
 router.get('/api/emergency-requests', async (req, res) => {
   try {
-    const emergencyRequests = await EmergencyRequest.findAll({
+    const { status } = req.query;
+    const where = {};
+    
+    if (status) {
+      where.status = status;
+    }
+    
+    const requests = await EmergencyRequest.findAll({
+      where,
       include: [
-        { model: EmergencyUser, required: false },
-        { model: FirstResponder, required: false }
-      ]
+        { 
+          model: EmergencyUser,
+          include: [
+            { model: User }
+          ]
+        },
+        { 
+          model: FirstResponder,
+          include: [
+            { model: User }
+          ]
+        }
+      ],
+      order: [['createdAt', 'DESC']]
     });
-    res.json(emergencyRequests);
+    
+    res.json(requests);
   } catch (error) {
     console.error('Error fetching emergency requests:', error);
     res.status(500).json({ error: 'Failed to fetch emergency requests' });
@@ -141,19 +234,29 @@ router.get('/api/emergency-requests', async (req, res) => {
 // Get emergency request by ID
 router.get('/api/emergency-requests/:id', async (req, res) => {
   try {
-    const emergencyRequest = await EmergencyRequest.findByPk(req.params.id, {
+    const request = await EmergencyRequest.findByPk(req.params.id, {
       include: [
-        { model: EmergencyUser, required: false },
-        { model: FirstResponder, required: false },
+        { 
+          model: EmergencyUser,
+          include: [
+            { model: User }
+          ]
+        },
+        { 
+          model: FirstResponder,
+          include: [
+            { model: User }
+          ]
+        },
         { model: Feedback, required: false }
       ]
     });
     
-    if (!emergencyRequest) {
+    if (!request) {
       return res.status(404).json({ error: 'Emergency request not found' });
     }
     
-    res.json(emergencyRequest);
+    res.json(request);
   } catch (error) {
     console.error('Error fetching emergency request:', error);
     res.status(500).json({ error: 'Failed to fetch emergency request' });
@@ -163,10 +266,20 @@ router.get('/api/emergency-requests/:id', async (req, res) => {
 // Get all certifications
 router.get('/api/certifications', async (req, res) => {
   try {
+    const { status } = req.query;
+    const where = {};
+    
+    // Apply status filter if provided
+    if (status) {
+      where.status = status;
+    }
+    
     const certifications = await Certification.findAll({
+      where,
       include: [
         { model: User, required: true }
-      ]
+      ],
+      order: [['createdAt', 'DESC']]
     });
     res.json(certifications);
   } catch (error) {
