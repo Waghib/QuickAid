@@ -9,17 +9,24 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  Image,
+  Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { authStyles } from '../styles/authStyles';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
+import storage from '@react-native-firebase/storage';
+import { launchImageLibrary } from 'react-native-image-picker';
 
 const ResponderAccount = () => {
   const navigation = useNavigation();
   const { width, height } = useWindowDimensions();
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [profileImage, setProfileImage] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   useEffect(() => {
     fetchUserData();
@@ -35,7 +42,9 @@ const ResponderAccount = () => {
           .get();
 
         if (userDoc.exists) {
-          setUserData(userDoc.data());
+          const data = userDoc.data();
+          setUserData(data);
+          setProfileImage(data.profileImageUrl || null);
         }
       }
     } catch (error) {
@@ -43,6 +52,84 @@ const ResponderAccount = () => {
       Alert.alert('Error', 'Failed to load user data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const selectImage = async () => {
+    const options = {
+      maxWidth: 2000,
+      maxHeight: 2000,
+      storageOptions: {
+        skipBackup: true,
+        path: 'images',
+      },
+    };
+
+    try {
+      const result = await launchImageLibrary(options);
+      
+      if (result.didCancel) {
+        return;
+      }
+
+      if (result.errorCode) {
+        Alert.alert('Error', 'ImagePicker Error: ' + result.errorMessage);
+        return;
+      }
+
+      if (result.assets && result.assets.length > 0) {
+        const source = { uri: result.assets[0].uri };
+        uploadImage(source.uri);
+      }
+    } catch (error) {
+      console.error('Image selection error:', error);
+      Alert.alert('Error', 'Failed to select image');
+    }
+  };
+
+  const uploadImage = async (uri) => {
+    setUploading(true);
+    setUploadProgress(0);
+    
+    try {
+      const currentUser = auth().currentUser;
+      if (!currentUser) {
+        throw new Error('User not logged in');
+      }
+
+      const filename = uri.substring(uri.lastIndexOf('/') + 1);
+      const storageRef = storage().ref(`profile_images/${currentUser.uid}/${filename}`);
+      
+      // Upload file
+      const task = storageRef.putFile(uri);
+      
+      // Monitor upload progress
+      task.on('state_changed', snapshot => {
+        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        setUploadProgress(progress);
+      });
+
+      await task;
+      
+      // Get download URL
+      const downloadUrl = await storageRef.getDownloadURL();
+      
+      // Update Firestore with image URL
+      await firestore()
+        .collection('users')
+        .doc(currentUser.phoneNumber)
+        .update({
+          profileImageUrl: downloadUrl,
+        });
+      
+      setProfileImage(downloadUrl);
+      Alert.alert('Success', 'Profile picture updated successfully');
+    } catch (error) {
+      console.error('Upload error:', error);
+      Alert.alert('Error', 'Failed to upload image');
+    } finally {
+      setUploading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -106,6 +193,32 @@ const ResponderAccount = () => {
       </View>
 
       <ScrollView style={styles.content}>
+        <View style={styles.profileImageContainer}>
+          {profileImage ? (
+            <Image source={{ uri: profileImage }} style={styles.profileImage} />
+          ) : (
+            <View style={styles.placeholderImage}>
+              <Text style={styles.placeholderText}>{userData?.name?.[0] || '?'}</Text>
+            </View>
+          )}
+          
+          {uploading ? (
+            <View style={styles.uploadProgressContainer}>
+              <ActivityIndicator size="small" color="#2B95E1" />
+              <Text style={styles.uploadProgressText}>{`${Math.round(uploadProgress)}%`}</Text>
+            </View>
+          ) : (
+            <TouchableOpacity 
+              style={styles.uploadButton}
+              onPress={selectImage}
+            >
+              <Text style={styles.uploadButtonText}>
+                {profileImage ? 'Change Photo' : 'Add Photo'}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
         <AccountItem label="Name" value={userData?.name || 'N/A'} />
         <AccountItem label="Phone number" value={userData?.phoneNumber || 'N/A'} />
         <AccountItem label="CNIC" value={userData?.cnic || 'N/A'} />
@@ -146,6 +259,48 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 20,
+  },
+  profileImageContainer: {
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  profileImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    marginBottom: 10,
+  },
+  placeholderImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#DDDDDD',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  placeholderText: {
+    fontSize: 36,
+    color: '#888888',
+    fontWeight: 'bold',
+  },
+  uploadButton: {
+    marginTop: 5,
+    padding: 8,
+    borderRadius: 5,
+  },
+  uploadButtonText: {
+    color: '#2B95E1',
+    fontWeight: '500',
+  },
+  uploadProgressContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 5,
+  },
+  uploadProgressText: {
+    marginLeft: 10,
+    color: '#2B95E1',
   },
   accountItem: {
     backgroundColor: '#FFFFFF',

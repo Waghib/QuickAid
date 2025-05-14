@@ -16,6 +16,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
 import Geolocation from '@react-native-community/geolocation';
+import auth from '@react-native-firebase/auth';
 
 // Separate Menu component
 const SideMenu = ({ visible, onClose, onTraining, onAccount }) => {
@@ -118,6 +119,37 @@ const ResponderHome = () => {
     longitudeDelta: 0.0421,
   });
   const [locationError, setLocationError] = useState(null);
+
+  const handleLogout = async () => {
+    try {
+      Alert.alert(
+        'Logout',
+        'Are you sure you want to logout?',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+          {
+            text: 'Logout',
+            onPress: async () => {
+              try {
+                await auth().signOut();
+                // No need to navigate - App.tsx onAuthStateChanged will handle navigation
+              } catch (error) {
+                console.error('Logout error:', error);
+                Alert.alert('Error', 'Failed to logout');
+              }
+            },
+          },
+        ],
+        { cancelable: true }
+      );
+    } catch (error) {
+      console.error('Logout error:', error);
+      Alert.alert('Error', 'Failed to logout');
+    }
+  };
 
   const requestLocationPermission = async () => {
     try {
@@ -235,6 +267,9 @@ const ResponderHome = () => {
     menuIcon: {
       fontSize: Math.min(width, height) * 0.06,
     },
+    logoutIcon: {
+      fontSize: Math.min(width, height) * 0.04,
+    },
     mapContainer: {
       height: height * 0.75,
     },
@@ -259,6 +294,17 @@ const ResponderHome = () => {
           onPress={() => setIsMenuVisible(true)}
         >
           <Text style={[styles.menuIcon, dynamicStyles.menuIcon]}>☰</Text>
+        </TouchableOpacity>
+
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>QuickAid Responder</Text>
+        </View>
+        
+        <TouchableOpacity 
+          style={styles.logoutButton}
+          onPress={handleLogout}
+        >
+          <Text style={[styles.logoutText]}>Logout</Text>
         </TouchableOpacity>
       </View>
 
@@ -313,12 +359,33 @@ const styles = StyleSheet.create({
     backgroundColor: '#2B95E1',
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  headerTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   menuButton: {
     padding: 8,
   },
   menuIcon: {
     color: '#FFFFFF',
+  },
+  logoutButton: {
+    padding: 8,
+    backgroundColor: '#FF3B30',
+    borderRadius: 5,
+    marginRight: 5,
+  },
+  logoutText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: 12,
   },
   mapContainer: {
     width: '100%',
