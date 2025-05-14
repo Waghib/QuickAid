@@ -14,12 +14,12 @@ import {
   Linking,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import Geolocation from '@react-native-community/geolocation';
-import auth from '@react-native-firebase/auth';
+import firestore from '@react-native-firebase/firestore';
 
 // Separate Menu component
-const SideMenu = ({ visible, onClose, onTraining, onAccount, onHelp, onCertification }) => {
+const SideMenu = ({ visible, onClose, onTraining, onAccount }) => {
   const slideAnim = useRef(new Animated.Value(-300)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -97,18 +97,6 @@ const SideMenu = ({ visible, onClose, onTraining, onAccount, onHelp, onCertifica
           >
             <Text style={styles.menuItemText}>Training Videos</Text>
           </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.menuItem}
-            onPress={onCertification}
-          >
-            <Text style={styles.menuItemText}>Certification</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.menuItem}
-            onPress={onHelp}
-          >
-            <Text style={styles.menuItemText}>Help</Text>
-          </TouchableOpacity>
         </Animated.View>
         <TouchableOpacity 
           style={[styles.modalOverlay]}
@@ -122,7 +110,7 @@ const SideMenu = ({ visible, onClose, onTraining, onAccount, onHelp, onCertifica
 
 const Home = () => {
   const navigation = useNavigation();
-  const { width, height } = useWindowDimensions();
+  const { height, width } = useWindowDimensions();
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   const [userLocation, setUserLocation] = useState({
     latitude: 37.78825,
@@ -131,68 +119,7 @@ const Home = () => {
     longitudeDelta: 0.0421,
   });
   const [locationError, setLocationError] = useState(null);
-
-  const handleLogout = async () => {
-    try {
-      Alert.alert(
-        'Logout',
-        'Are you sure you want to logout?',
-        [
-          {
-            text: 'Cancel',
-            style: 'cancel',
-          },
-          {
-            text: 'Logout',
-            onPress: async () => {
-              try {
-                await auth().signOut();
-                // No need to navigate - App.tsx onAuthStateChanged will handle navigation
-              } catch (error) {
-                console.error('Logout error:', error);
-                Alert.alert('Error', 'Failed to logout');
-              }
-            },
-          },
-        ],
-        { cancelable: true }
-      );
-    } catch (error) {
-      console.error('Logout error:', error);
-      Alert.alert('Error', 'Failed to logout');
-    }
-  };
-
-  const requestLocationPermission = async () => {
-    try {
-      if (Platform.OS === 'ios') {
-        const auth = await Geolocation.requestAuthorization('whenInUse');
-        if (auth === 'granted') {
-          getCurrentLocation();
-        }
-      } else {
-        const granted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-          {
-            title: "Location Permission",
-            message: "This app needs access to your location to show you on the map.",
-            buttonNeutral: "Ask Me Later",
-            buttonNegative: "Cancel",
-            buttonPositive: "OK"
-          }
-        );
-        if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-          getCurrentLocation();
-        } else {
-          setLocationError('Location permission denied');
-          Alert.alert('Permission Denied', 'Please enable location services to use this feature');
-        }
-      }
-    } catch (err) {
-      console.warn(err);
-      setLocationError('Error requesting location permission');
-    }
-  };
+  const [responders, setResponders] = useState([]);
 
   const getCurrentLocation = () => {
     Geolocation.getCurrentPosition(
@@ -210,28 +137,95 @@ const Home = () => {
         console.log('Location error:', error);
         setLocationError(error.message);
         
-        // Check if location services are enabled
-        if (error.code === error.POSITION_UNAVAILABLE) {
+        // Check if location services are disabled
+        if (error.code === 2) { // POSITION_UNAVAILABLE
           Alert.alert(
             'Location Services Disabled',
-            'Please enable location services in your device settings.',
+            'Please enable location services to use this feature.',
             [
               {
-                text: 'OK',
+                text: 'Open Settings',
+                onPress: () => {
+                  if (Platform.OS === 'ios') {
+                    Linking.openURL('app-settings:');
+                  } else {
+                    Linking.openSettings();
+                  }
+                }
+              },
+              {
+                text: 'Cancel',
+                style: 'cancel'
               }
             ]
           );
         }
       },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+      {
+        enableHighAccuracy: true,
+        timeout: 20000,
+        maximumAge: 1000,
+        distanceFilter: 10
+      }
     );
   };
 
-  // Set up location tracking when component mounts
+  const requestLocationPermission = async () => {
+    try {
+      if (Platform.OS === 'ios') {
+        const auth = await Geolocation.requestAuthorization('whenInUse');
+        if (auth === 'granted') {
+          getCurrentLocation();
+        }
+      } else {
+        // First check if permission is already granted
+        const granted = await PermissionsAndroid.check(
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
+        );
+        
+        if (granted) {
+          getCurrentLocation();
+        } else {
+          // Only request if not already granted
+          const permissionResult = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+            {
+              title: "Location Permission",
+              message: "This app needs access to your location to show you on the map.",
+              buttonNeutral: "Ask Me Later",
+              buttonNegative: "Cancel",
+              buttonPositive: "OK"
+            }
+          );
+          if (permissionResult === PermissionsAndroid.RESULTS.GRANTED) {
+            getCurrentLocation();
+          } else {
+            setLocationError('Location permission denied');
+            Alert.alert(
+              'Permission Denied', 
+              'Please enable location permissions in your device settings to use this feature.',
+              [
+                {
+                  text: 'Open Settings',
+                  onPress: () => Linking.openSettings()
+                },
+                {
+                  text: 'Cancel',
+                  style: 'cancel'
+                }
+              ]
+            );
+          }
+        }
+      }
+    } catch (err) {
+      console.warn(err);
+      setLocationError('Error requesting location permission');
+    }
+  };
+
+  // Watch position for real-time updates
   useEffect(() => {
-    requestLocationPermission();
-    
-    // Set up location watching
     const watchId = Geolocation.watchPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
@@ -247,13 +241,42 @@ const Home = () => {
         console.log('Watch position error:', error);
         setLocationError(error.message);
       },
-      { enableHighAccuracy: true, distanceFilter: 10, interval: 5000, fastestInterval: 2000 }
+      {
+        enableHighAccuracy: true,
+        distanceFilter: 10,
+        interval: 5000,
+        fastestInterval: 2000
+      }
     );
-    
-    // Clean up when component unmounts
+
+    // Request permission when component mounts
+    requestLocationPermission();
+
+    // Cleanup
     return () => {
       Geolocation.clearWatch(watchId);
     };
+  }, []);
+
+  useEffect(() => {
+    const subscriber = firestore()
+      .collection('responders')
+      .where('isAvailable', '==', true)
+      .onSnapshot(querySnapshot => {
+        const respondersArray = [];
+        querySnapshot.forEach(documentSnapshot => {
+          respondersArray.push({
+            id: documentSnapshot.id,
+            ...documentSnapshot.data(),
+          });
+        });
+        setResponders(respondersArray);
+      }, error => {
+        console.error("Firestore error:", error);
+      });
+
+    // Cleanup subscription on unmount
+    return () => subscriber();
   }, []);
 
   const handleTraining = () => {
@@ -270,20 +293,6 @@ const Home = () => {
     }, 300);
   };
 
-  const handleHelp = () => {
-    setIsMenuVisible(false);
-    setTimeout(() => {
-      navigation.navigate('Help');
-    }, 300);
-  };
-
-  const handleCertification = () => {
-    setIsMenuVisible(false);
-    setTimeout(() => {
-      navigation.navigate('Certification');
-    }, 300);
-  };
-
   // Calculate dynamic styles based on screen dimensions
   const dynamicStyles = {
     header: {
@@ -292,17 +301,6 @@ const Home = () => {
     },
     menuIcon: {
       fontSize: Math.min(width, height) * 0.06,
-    },
-    logoutButton: {
-      padding: 8,
-      backgroundColor: '#FF3B30',
-      borderRadius: 5,
-      marginRight: 5,
-    },
-    logoutText: {
-      color: '#FFFFFF',
-      fontWeight: 'bold',
-      fontSize: 12,
     },
     mapContainer: {
       height: height * 0.75,
@@ -335,17 +333,6 @@ const Home = () => {
         >
           <Text style={[styles.menuIcon, dynamicStyles.menuIcon]}>☰</Text>
         </TouchableOpacity>
-        
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>QuickAid</Text>
-        </View>
-        
-        <TouchableOpacity 
-          style={styles.logoutButton}
-          onPress={handleLogout}
-        >
-          <Text style={[styles.logoutText]}>Logout</Text>
-        </TouchableOpacity>
       </View>
 
       <View style={[styles.mapContainer, dynamicStyles.mapContainer]}>
@@ -353,20 +340,66 @@ const Home = () => {
           style={styles.map}
           provider={PROVIDER_GOOGLE}
           initialRegion={userLocation}
-          region={userLocation}
-          showsUserLocation={true}
-          showsMyLocationButton={true}
-          followsUserLocation={true}
+          showsUserLocation
+          showsMyLocationButton
+          followsUserLocation
+          zoomEnabled
+          rotateEnabled
+          scrollEnabled
+          loadingEnabled
           onUserLocationChange={(event) => {
-            const { latitude, longitude } = event.nativeEvent.coordinate;
-            setUserLocation({
-              latitude,
-              longitude,
-              latitudeDelta: 0.0922,
-              longitudeDelta: 0.0421,
-            });
+            if (event.nativeEvent.coordinate) {
+              const { latitude, longitude } = event.nativeEvent.coordinate;
+              setUserLocation({
+                latitude,
+                longitude,
+                latitudeDelta: 0.0922,
+                longitudeDelta: 0.0421,
+              });
+            }
           }}
-        />
+          onMapReady={() => {
+            console.log('Map is ready');
+          }}
+          onError={(error) => {
+            console.log('Map error:', error);
+          }}
+        >
+          {!locationError && (
+            <Marker
+              coordinate={{
+                latitude: userLocation.latitude,
+                longitude: userLocation.longitude,
+              }}
+              title="You are here"
+              description="Your current location"
+              tracksViewChanges={false}
+            />
+          )}
+          
+          {responders && responders.map(responder => (
+            <Marker
+              key={responder.id}
+              coordinate={{
+                latitude: responder.location?.latitude || 0,
+                longitude: responder.location?.longitude || 0,
+              }}
+              title={responder.name || 'Responder'}
+              description={responder.status || 'Available'}
+              pinColor="red"
+              tracksViewChanges={false}
+            />
+          ))}
+        </MapView>
+        
+        {locationError && (
+          <TouchableOpacity 
+            style={[styles.retryButton, { top: height * 0.02 }]}
+            onPress={getCurrentLocation}
+          >
+            <Text style={styles.retryText}>Retry Getting Location</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <View style={styles.bottomContainer}>
@@ -384,8 +417,6 @@ const Home = () => {
         onClose={() => setIsMenuVisible(false)}
         onTraining={handleTraining}
         onAccount={handleAccount}
-        onHelp={handleHelp}
-        onCertification={handleCertification}
       />
     </View>
   );
@@ -400,33 +431,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#2B95E1',
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  headerTitle: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: 'bold',
   },
   menuButton: {
     padding: 8,
   },
   menuIcon: {
     color: '#FFFFFF',
-  },
-  logoutButton: {
-    padding: 8,
-    backgroundColor: '#FF3B30',
-    borderRadius: 5,
-    marginRight: 5,
-  },
-  logoutText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: 12,
   },
   mapContainer: {
     width: '100%',
@@ -508,12 +518,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
   },
-  placeholderText: {
-    fontSize: 18,
-    color: '#333333',
-    textAlign: 'center',
-    padding: 20,
-  },
 });
 
-export default Home;
+export default Home; 
