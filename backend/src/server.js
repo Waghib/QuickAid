@@ -31,7 +31,7 @@ const { User, EmergencyUser, FirstResponder, EmergencyRequest, Feedback, Notific
 sequelize.authenticate()
     .then(() => {
         console.log('Database connected successfully');
-        return sequelize.sync({ force: true });
+        return sequelize.sync({ force: false });
     })
     .then(() => {
         console.log('Database synced successfully');
@@ -640,6 +640,270 @@ app.get('/api/update-metadata-column', async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to update metadata column' });
   }
 });
+
+// Create emergency request
+app.post('/api/emergency-requests', async (req, res) => {
+  try {
+    const { emergencyType, latitude, longitude, emergencyUserId } = req.body;
+    
+    // Validate required fields
+    if (!emergencyType || !latitude || !longitude || !emergencyUserId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Missing required fields: emergencyType, latitude, longitude, emergencyUserId' 
+      });
+    }
+    
+    // Generate a unique request ID
+    const requestId = `ER-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    
+    // Create emergency request
+    const emergencyRequest = await EmergencyRequest.create({
+      requestId,
+      emergencyType,
+      latitude,
+      longitude,
+      time: new Date(),
+      status: 'pending',
+      emergencyUserId
+    });
+    
+    console.log('Emergency request created:', requestId);
+    
+    res.status(201).json({
+      success: true,
+      message: 'Emergency request created successfully',
+      data: emergencyRequest
+    });
+  } catch (error) {
+    console.error('Error creating emergency request:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to create emergency request', 
+      error: error.message 
+    });
+  }
+});
+
+// Get all pending emergency requests
+app.get('/api/emergency-requests/pending', async (req, res) => {
+  try {
+    const pendingRequests = await EmergencyRequest.findAll({
+      where: { status: 'pending' },
+      order: [['time', 'DESC']]
+    });
+    
+    res.status(200).json({
+      success: true,
+      data: pendingRequests
+    });
+  } catch (error) {
+    console.error('Error fetching pending emergency requests:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch pending emergency requests', 
+      error: error.message 
+    });
+  }
+});
+
+// Accept emergency request
+app.put('/api/emergency-requests/:requestId/accept', async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const { firstResponderId } = req.body;
+    
+    if (!firstResponderId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Missing required field: firstResponderId' 
+      });
+    }
+    
+    // Find the emergency request
+    const emergencyRequest = await EmergencyRequest.findOne({
+      where: { requestId }
+    });
+    
+    if (!emergencyRequest) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Emergency request not found' 
+      });
+    }
+    
+    // Check if request is already accepted or completed
+    if (emergencyRequest.status !== 'pending') {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Emergency request is already ${emergencyRequest.status}` 
+      });
+    }
+    
+    // Update emergency request
+    emergencyRequest.status = 'accepted';
+    emergencyRequest.firstResponderId = firstResponderId;
+    await emergencyRequest.save();
+    
+    console.log(`Emergency request ${requestId} accepted by responder ${firstResponderId}`);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Emergency request accepted successfully',
+      data: emergencyRequest
+    });
+  } catch (error) {
+    console.error('Error accepting emergency request:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to accept emergency request', 
+      error: error.message 
+    });
+  }
+});
+
+// Get emergency requests for a responder
+app.get('/api/responders/:firstResponderId/emergency-requests', async (req, res) => {
+  try {
+    const { firstResponderId } = req.params;
+    const { status } = req.query;
+    
+    const whereClause = { firstResponderId };
+    
+    // Add status filter if provided
+    if (status) {
+      whereClause.status = status;
+    }
+    
+    const requests = await EmergencyRequest.findAll({
+      where: whereClause,
+      order: [['time', 'DESC']]
+    });
+    
+    res.status(200).json({
+      success: true,
+      data: requests
+    });
+  } catch (error) {
+    console.error('Error fetching responder emergency requests:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch responder emergency requests', 
+      error: error.message 
+    });
+  }
+});
+
+// Complete emergency request
+app.put('/api/emergency-requests/:requestId/complete', async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    
+    // Find the emergency request
+    const emergencyRequest = await EmergencyRequest.findOne({
+      where: { requestId }
+    });
+    
+    if (!emergencyRequest) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Emergency request not found' 
+      });
+    }
+    
+    // Check if request is already completed
+    if (emergencyRequest.status === 'completed') {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Emergency request is already completed' 
+      });
+    }
+    
+    // Update emergency request
+    emergencyRequest.status = 'completed';
+    await emergencyRequest.save();
+    
+    console.log(`Emergency request ${requestId} marked as completed`);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Emergency request completed successfully',
+      data: emergencyRequest
+    });
+  } catch (error) {
+    console.error('Error completing emergency request:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to complete emergency request', 
+      error: error.message 
+    });
+  }
+});
+
+// Get nearby emergency requests
+app.get('/api/emergency-requests/nearby', async (req, res) => {
+  try {
+    const { latitude, longitude, radius = 10 } = req.query; // radius in kilometers
+    
+    if (!latitude || !longitude) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Missing required query parameters: latitude, longitude' 
+      });
+    }
+    
+    // Get all pending requests
+    const pendingRequests = await EmergencyRequest.findAll({
+      where: { status: 'pending' }
+    });
+    
+    // Calculate distance for each request
+    const nearbyRequests = pendingRequests.map(request => {
+      // Calculate distance using Haversine formula
+      const distance = calculateDistance(
+        parseFloat(latitude), 
+        parseFloat(longitude), 
+        request.latitude, 
+        request.longitude
+      );
+      
+      return {
+        ...request.toJSON(),
+        distance: parseFloat(distance.toFixed(2)) // distance in kilometers, rounded to 2 decimal places
+      };
+    })
+    // Filter requests within the specified radius
+    .filter(request => request.distance <= radius)
+    // Sort by distance (closest first)
+    .sort((a, b) => a.distance - b.distance);
+    
+    res.status(200).json({
+      success: true,
+      data: nearbyRequests
+    });
+  } catch (error) {
+    console.error('Error fetching nearby emergency requests:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch nearby emergency requests', 
+      error: error.message 
+    });
+  }
+});
+
+// Helper function to calculate distance between two coordinates using Haversine formula
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Radius of the Earth in kilometers
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const distance = R * c; // Distance in kilometers
+  return distance;
+}
 
 // Error handling middleware
 app.use((err, req, res, next) => {
