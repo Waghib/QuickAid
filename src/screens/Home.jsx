@@ -131,6 +131,34 @@ const Home = () => {
     longitudeDelta: 0.0421,
   });
   const [locationError, setLocationError] = useState(null);
+  const [isUserModalVisible, setIsUserModalVisible] = useState(false);
+  const [requestSubmitted, setRequestSubmitted] = useState(false);
+  
+  const responderUser = {
+    name: "aarish",
+    phoneNumber: "+923130000001",
+  };
+
+  // Handle request submission
+  const handleSubmitRequest = () => {
+    setRequestSubmitted(true);
+    Alert.alert(
+      'Request Submitted',
+      'Your help request has been submitted successfully.',
+      [{ text: 'OK' }]
+    );
+  };
+
+  // Reset request status when modal is closed
+  const handleCloseModal = () => {
+    setIsUserModalVisible(false);
+    // Reset the request status after a delay to allow modal animation to complete
+    setTimeout(() => {
+      if (!isUserModalVisible) {
+        setRequestSubmitted(false);
+      }
+    }, 300);
+  };
 
   const handleLogout = async () => {
     try {
@@ -372,12 +400,74 @@ const Home = () => {
       <View style={styles.bottomContainer}>
         <TouchableOpacity 
           style={[styles.helpButton, dynamicStyles.bottomButton]}
+          onPress={() => setIsUserModalVisible(true)}
         >
           <Text style={[styles.helpButtonText, dynamicStyles.buttonText]}>
             Request for help
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* User Modal */}
+      <Modal
+        visible={isUserModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={handleCloseModal}
+      >
+        <View style={styles.userModalContainer}>
+          <View style={styles.userModalContent}>
+            <Text style={styles.userModalTitle}>Help Request</Text>
+            <Text style={styles.responderInfoLabel}>Responder Information:</Text>
+            
+            <View style={styles.responderInfoRow}>
+              <Text style={styles.responderInfoLabel}>Name:</Text>
+              <Text style={styles.responderInfoValue}>{responderUser.name}</Text>
+            </View>
+            
+            <View style={styles.responderInfoRow}>
+              <Text style={styles.responderInfoLabel}>Phone:</Text>
+              <Text style={styles.responderInfoValue}>{responderUser.phoneNumber}</Text>
+            </View>
+            
+            {requestSubmitted && (
+              <View style={styles.responderInfoRow}>
+                <Text style={styles.responderInfoLabel}>Status:</Text>
+                <Text style={styles.submittedStatus}>Request Submitted</Text>
+              </View>
+            )}
+            
+            <TouchableOpacity 
+              style={styles.callButton}
+              onPress={() => Linking.openURL(`tel:${responderUser.phoneNumber}`)}
+            >
+              <Text style={styles.buttonText}>Call</Text>
+            </TouchableOpacity>
+            
+            <View style={styles.actionButtonsContainer}>
+              <TouchableOpacity 
+                style={[
+                  styles.submitRequestButton,
+                  requestSubmitted && styles.disabledButton
+                ]}
+                onPress={handleSubmitRequest}
+                disabled={requestSubmitted}
+              >
+                <Text style={styles.buttonText}>
+                  {requestSubmitted ? 'Request Submitted' : 'Submit Request'}
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.closeButton}
+                onPress={handleCloseModal}
+              >
+                <Text style={styles.buttonText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <SideMenu
         visible={isMenuVisible}
@@ -513,6 +603,95 @@ const styles = StyleSheet.create({
     color: '#333333',
     textAlign: 'center',
     padding: 20,
+  },
+  userModalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  userModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 20,
+    width: '85%',
+    maxWidth: 400,
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  userModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2B95E1',
+    marginBottom: 15,
+    alignSelf: 'center',
+  },
+  responderInfoLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333333',
+    width: 70,
+  },
+  responderInfoValue: {
+    fontSize: 16,
+    color: '#555555',
+    flex: 1,
+  },
+  responderInfoRow: {
+    flexDirection: 'row',
+    width: '100%',
+    paddingVertical: 6,
+    alignItems: 'center',
+  },
+  callButton: {
+    backgroundColor: '#4CAF50',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginTop: 15,
+    width: '100%',
+    alignItems: 'center',
+  },
+  actionButtonsContainer: {
+    flexDirection: 'column',
+    width: '100%',
+    marginTop: 10,
+  },
+  submitRequestButton: {
+    backgroundColor: '#FFA500', // Orange
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginBottom: 10,
+    width: '100%',
+    alignItems: 'center',
+  },
+  closeButton: {
+    backgroundColor: '#2B95E1',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    width: '100%',
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  submittedStatus: {
+    fontSize: 16,
+    color: '#4CAF50',
+    fontWeight: 'bold',
+    flex: 1,
+  },
+  disabledButton: {
+    backgroundColor: '#A9A9A9', // Gray color for disabled state
+    opacity: 0.7,
   },
 });
 

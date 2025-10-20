@@ -12,6 +12,8 @@ import {
   Alert,
   Animated,
   Linking,
+  TextInput,
+  ScrollView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
@@ -112,6 +114,14 @@ const ResponderHome = () => {
   const navigation = useNavigation();
   const { width, height } = useWindowDimensions();
   const [isMenuVisible, setIsMenuVisible] = useState(false);
+  const [isRequestModalVisible, setIsRequestModalVisible] = useState(false);
+  const [requestStatus, setRequestStatus] = useState('pending'); // 'pending', 'accepted', 'declined'
+  const [isReportModalVisible, setIsReportModalVisible] = useState(false);
+  const [reportDetails, setReportDetails] = useState({
+    incidentDescription: '',
+    actionsTaken: '',
+    requiredFollowUp: '',
+  });
   const [userLocation, setUserLocation] = useState({
     latitude: 37.78825,
     longitude: -122.4324,
@@ -119,6 +129,12 @@ const ResponderHome = () => {
     longitudeDelta: 0.0421,
   });
   const [locationError, setLocationError] = useState(null);
+  
+  const emergencyRequester = {
+    name: "waghib",
+    phoneNumber: "+923137003522",
+    role: "emergency"
+  };
 
   const handleLogout = async () => {
     try {
@@ -258,6 +274,67 @@ const ResponderHome = () => {
     }, 300);
   };
 
+  const handleAcceptRequest = () => {
+    setRequestStatus('accepted');
+    Alert.alert(
+      'Request Accepted',
+      `You have accepted ${emergencyRequester.name}'s request for help.`,
+      [{ text: 'OK' }]
+    );
+  };
+
+  const handleDeclineRequest = () => {
+    setRequestStatus('declined');
+    Alert.alert(
+      'Request Declined',
+      'You have declined the request for help.',
+      [{ text: 'OK', onPress: () => setIsRequestModalVisible(false) }]
+    );
+  };
+
+  // Function to handle submit report button
+  const handleSubmitReportClick = () => {
+    setIsReportModalVisible(true);
+  };
+
+  // Function to submit the report
+  const handleSubmitReport = () => {
+    // Here you would typically send this data to your backend
+    console.log('Report submitted:', reportDetails);
+    
+    Alert.alert(
+      'Report Submitted',
+      'Thank you for your report. It has been successfully submitted.',
+      [
+        { 
+          text: 'OK', 
+          onPress: () => {
+            setIsReportModalVisible(false);
+            setIsRequestModalVisible(false);
+            setRequestStatus('pending');
+            // Reset report form
+            setReportDetails({
+              incidentDescription: '',
+              actionsTaken: '',
+              requiredFollowUp: '',
+            });
+          } 
+        }
+      ]
+    );
+  };
+
+  // Function to reset request status when modal is closed
+  const handleCloseRequestModal = () => {
+    setIsRequestModalVisible(false);
+    // We don't reset the status immediately to allow for animation
+    setTimeout(() => {
+      if (!isRequestModalVisible) {
+        setRequestStatus('pending');
+      }
+    }, 300);
+  };
+
   // Calculate dynamic styles based on screen dimensions
   const dynamicStyles = {
     header: {
@@ -333,12 +410,158 @@ const ResponderHome = () => {
       <View style={styles.bottomContainer}>
         <TouchableOpacity 
           style={[styles.statusButton, dynamicStyles.bottomButton]}
+          onPress={() => setIsRequestModalVisible(true)}
         >
           <Text style={[styles.statusButtonText, dynamicStyles.buttonText]}>
             View Requests
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Emergency Request Modal */}
+      <Modal
+        visible={isRequestModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={handleCloseRequestModal}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.requestModalContent}>
+            <Text style={styles.requestModalTitle}>
+              {requestStatus === 'accepted' ? 'Accepted Request' : 'Emergency Request'}
+            </Text>
+            
+            <View style={styles.requestInfoContainer}>
+              <View style={styles.requestInfo}>
+                <Text style={styles.requestDetailLabel}>Name:</Text>
+                <Text style={styles.requestDetailValue}>{emergencyRequester.name}</Text>
+              </View>
+              
+              <View style={styles.requestInfo}>
+                <Text style={styles.requestDetailLabel}>Phone:</Text>
+                <Text style={styles.requestDetailValue}>{emergencyRequester.phoneNumber}</Text>
+              </View>
+              
+              <View style={styles.requestInfo}>
+                <Text style={styles.requestDetailLabel}>Request Type:</Text>
+                <Text style={styles.requestDetailValue}>{emergencyRequester.role}</Text>
+              </View>
+              
+              {requestStatus === 'accepted' && (
+                <View style={styles.requestInfo}>
+                  <Text style={styles.requestDetailLabel}>Status:</Text>
+                  <Text style={styles.acceptedStatus}>Accepted</Text>
+                </View>
+              )}
+            </View>
+            
+            <TouchableOpacity 
+              style={styles.callButton}
+              onPress={() => Linking.openURL(`tel:${emergencyRequester.phoneNumber}`)}
+            >
+              <Text style={styles.buttonText}>Call Requester</Text>
+            </TouchableOpacity>
+            
+            {requestStatus === 'pending' ? (
+              <View style={styles.actionButtonsContainer}>
+                <TouchableOpacity 
+                  style={styles.acceptButton}
+                  onPress={handleAcceptRequest}
+                >
+                  <Text style={styles.buttonText}>Accept</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={styles.declineButton}
+                  onPress={handleDeclineRequest}
+                >
+                  <Text style={styles.buttonText}>Decline</Text>
+                </TouchableOpacity>
+              </View>
+            ) : requestStatus === 'accepted' ? (
+              <>
+                <TouchableOpacity 
+                  style={styles.reportButton}
+                  onPress={handleSubmitReportClick}
+                >
+                  <Text style={styles.buttonText}>Submit Report</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={styles.closeButton}
+                  onPress={handleCloseRequestModal}
+                >
+                  <Text style={styles.buttonText}>Close</Text>
+                </TouchableOpacity>
+              </>
+            ) : null}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Report Submission Modal */}
+      <Modal
+        visible={isReportModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsReportModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <ScrollView contentContainerStyle={styles.scrollViewContainer}>
+            <View style={styles.reportModalContent}>
+              <Text style={styles.reportModalTitle}>Submit Report</Text>
+              
+              <View style={styles.reportFormContainer}>
+                <Text style={styles.reportInputLabel}>Incident Description:</Text>
+                <TextInput
+                  style={styles.reportTextInput}
+                  multiline={true}
+                  numberOfLines={4}
+                  value={reportDetails.incidentDescription}
+                  onChangeText={(text) => setReportDetails({...reportDetails, incidentDescription: text})}
+                  placeholder="Describe the incident..."
+                />
+                
+                <Text style={styles.reportInputLabel}>Actions Taken:</Text>
+                <TextInput
+                  style={styles.reportTextInput}
+                  multiline={true}
+                  numberOfLines={3}
+                  value={reportDetails.actionsTaken}
+                  onChangeText={(text) => setReportDetails({...reportDetails, actionsTaken: text})}
+                  placeholder="What actions did you take?"
+                />
+                
+                <Text style={styles.reportInputLabel}>Required Follow-up:</Text>
+                <TextInput
+                  style={styles.reportTextInput}
+                  multiline={true}
+                  numberOfLines={3}
+                  value={reportDetails.requiredFollowUp}
+                  onChangeText={(text) => setReportDetails({...reportDetails, requiredFollowUp: text})}
+                  placeholder="Is any follow-up required?"
+                />
+              </View>
+              
+              <View style={styles.reportButtonsContainer}>
+                <TouchableOpacity 
+                  style={styles.submitReportButton}
+                  onPress={handleSubmitReport}
+                >
+                  <Text style={styles.buttonText}>Submit</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={styles.cancelReportButton}
+                  onPress={() => setIsReportModalVisible(false)}
+                >
+                  <Text style={styles.buttonText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
+        </View>
+      </Modal>
 
       <SideMenu
         visible={isMenuVisible}
@@ -419,7 +642,9 @@ const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
     flexDirection: 'row',
-    backgroundColor: 'transparent',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   modalOverlay: {
     flex: 1,
@@ -474,6 +699,179 @@ const styles = StyleSheet.create({
     color: '#333333',
     textAlign: 'center',
     padding: 20,
+  },
+  requestModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 20,
+    width: '90%',
+    maxWidth: 400,
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  requestModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2B95E1',
+    marginBottom: 15,
+    alignSelf: 'center',
+  },
+  requestInfoContainer: {
+    width: '100%',
+    marginBottom: 10,
+  },
+  requestInfo: {
+    flexDirection: 'row',
+    width: '100%',
+    paddingVertical: 6,
+    alignItems: 'center',
+  },
+  requestDetailLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333333',
+    width: 110,
+  },
+  requestDetailValue: {
+    fontSize: 16,
+    color: '#555555',
+    flex: 1,
+  },
+  acceptedStatus: {
+    fontSize: 16,
+    color: '#4CAF50',
+    fontWeight: 'bold',
+    flex: 1,
+  },
+  callButton: {
+    backgroundColor: '#4CAF50', // green
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginTop: 10,
+    width: '100%',
+    alignItems: 'center',
+  },
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginTop: 15,
+  },
+  acceptButton: {
+    backgroundColor: '#2B95E1', // blue
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    flex: 1,
+    marginRight: 5,
+    alignItems: 'center',
+  },
+  declineButton: {
+    backgroundColor: '#FF3B30', // red
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    flex: 1,
+    marginLeft: 5,
+    alignItems: 'center',
+  },
+  closeButton: {
+    backgroundColor: '#2B95E1',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginTop: 15,
+    width: '100%',
+    alignItems: 'center',
+  },
+  reportButton: {
+    backgroundColor: '#FFA500', // orange color for the report button
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginTop: 15,
+    width: '100%',
+    alignItems: 'center',
+  },
+  scrollViewContainer: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  reportModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 20,
+    width: '90%',
+    maxWidth: 500,
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  reportModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2B95E1',
+    marginBottom: 20,
+    alignSelf: 'center',
+  },
+  reportFormContainer: {
+    width: '100%',
+  },
+  reportInputLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333333',
+    marginBottom: 5,
+    marginTop: 10,
+  },
+  reportTextInput: {
+    borderWidth: 1,
+    borderColor: '#CCCCCC',
+    borderRadius: 5,
+    padding: 10,
+    fontSize: 16,
+    width: '100%',
+    textAlignVertical: 'top',
+    backgroundColor: '#F9F9F9',
+  },
+  reportButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginTop: 20,
+  },
+  submitReportButton: {
+    backgroundColor: '#4CAF50', // green
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    flex: 1,
+    marginRight: 5,
+    alignItems: 'center',
+  },
+  cancelReportButton: {
+    backgroundColor: '#FF3B30', // red
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    flex: 1,
+    marginLeft: 5,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });
 

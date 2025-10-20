@@ -149,8 +149,12 @@ const SignUpScreen = ({ route }) => {
   
         // Create user in PostgreSQL
         try {
+          console.log('=== ATTEMPTING TO CREATE USER IN POSTGRESQL ===');
+          console.log('Phone number:', fullPhoneNumber);
+          console.log('Name:', name);
+          
           // "Fire and forget" approach - don't wait for response
-          fetch('http://10.0.2.2:5000/api/users', {
+          fetch('http://192.168.100.173:5000/api/users', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -162,9 +166,17 @@ const SignUpScreen = ({ route }) => {
               latitude: 0,
               longitude: 0
             })
-          }).catch(error => {
-            console.error('Fetch error:', error);
-            // We're ignoring errors here since we know the user is created server-side
+          })
+          .then(response => {
+            console.log('PostgreSQL user creation response status:', response.status);
+            return response.json();
+          })
+          .then(data => {
+            console.log('PostgreSQL user creation success:', data);
+          })
+          .catch(error => {
+            console.error('PostgreSQL user creation failed:', error);
+            console.error('Error details:', error.message);
           });
           
           // Navigate directly to OTP verification without showing success message

@@ -1,3 +1,6 @@
+# Use local specs repo to avoid corrupted gRPC specs from CDN
+source '/Users/dev/Specs'
+
 # Resolve react_native_pods.rb with node to allow for hoisting
 require Pod::Executable.execute_command('node', ['-p',
   'require.resolve(
@@ -5,8 +8,11 @@ require Pod::Executable.execute_command('node', ['-p',
     {paths: [process.argv[1]]},
   )', __dir__]).strip
 
-platform :ios, min_ios_version_supported
+platform :ios, '13.4'
 prepare_react_native_project!
+
+# Enable modular headers for Swift pods compatibility
+use_modular_headers!
 
 linkage = ENV['USE_FRAMEWORKS']
 if linkage != nil
@@ -17,10 +23,17 @@ end
 target 'QuickAid' do
   config = use_native_modules!
 
+  # Pin safe gRPC versions to avoid corrupted 1.76.0-pre1 specs and compilation issues
+  pod 'gRPC-Core', '1.44.0'
+  pod 'gRPC-C++', '1.44.0'
+
   use_react_native!(
     :path => config[:reactNativePath],
     # An absolute path to your application root.
-    :app_path => "#{Pod::Config.instance.installation_root}/.."
+    :app_path => "#{Pod::Config.instance.installation_root}/..",
+    # Disable Hermes temporarily to avoid network/cmake issues
+    :hermes_enabled => false,
+    :fabric_enabled => false
   )
 
   target 'QuickAidTests' do
@@ -29,12 +42,40 @@ target 'QuickAid' do
   end
 
   post_install do |installer|
-    # https://github.com/facebook/react-native/blob/main/packages/react-native/scripts/react_native_pods.rb#L197-L202
+    # https://github.com/facebook/react-native/scripts/react_native_pods.rb#L197-L202
     react_native_post_install(
       installer,
       config[:reactNativePath],
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+    
+    # Fix deployment target warnings and architecture issues
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        # Set minimum iOS deployment target to 13.4
+        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.4'
+        
+        # Fix architecture issues - use arm64 for simulator on Apple Silicon
+        config.build_settings.delete('EXCLUDED_ARCHS[sdk=iphonesimulator*]')
+        config.build_settings['ONLY_ACTIVE_ARCH'] = 'YES'
+        
+        # Ensure proper C++ standard for gRPC and other C++ pods
+        config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'gnu++17'
+        config.build_settings['CLANG_CXX_LIBRARY'] = 'libc++'
+        
+        # Fix gRPC compilation issues
+        if target.name.include?('gRPC')
+          config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= []
+          config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << 'GRPC_BAZEL_BUILD=1'
+          config.build_settings['USER_HEADER_SEARCH_PATHS'] ||= []
+          config.build_settings['USER_HEADER_SEARCH_PATHS'] << '"$(PODS_TARGET_SRCROOT)"'
+        end
+        
+        # Fix potential linker issues
+        config.build_settings['OTHER_LDFLAGS'] ||= []
+        config.build_settings['OTHER_LDFLAGS'] << '-ObjC'
+      end
+    end
   end
 end

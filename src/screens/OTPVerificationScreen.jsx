@@ -56,65 +56,7 @@ const OTPVerificationScreen = () => {
       try {
         const credential = await confirm.confirm(otpString);
         if (credential) {
-          // Check user role in Firestore if not signing up
-          if (!isSignUp) {
-            const userDoc = await firestore()
-              .collection('users')
-              .doc(phoneNumber)
-              .get();
-
-            if (userDoc.exists) {
-              const userData = userDoc.data();
-              
-              // Show alert and navigate after user confirms
-              Alert.alert(
-                'Success',
-                'Phone number verified successfully!',
-                [
-                  {
-                    text: 'OK',
-                    onPress: () => {
-                      // Navigate based on role after alert confirmation
-                      if (userData.role === 'responder') {
-                        navigation.reset({
-                          index: 0,
-                          routes: [{ name: 'ResponderHome' }],
-                        });
-                      } else if (userData.role === 'emergency') {
-                        navigation.reset({
-                          index: 0,
-                          routes: [{ name: 'Home' }],
-                        });
-                      } else {
-                        // If role is not set, send to UserTypeSelection
-                        navigation.reset({
-                          index: 0,
-                          routes: [{ name: 'UserTypeSelection' }],
-                        });
-                      }
-                    }
-                  }
-                ],
-                { cancelable: false }
-              );
-            }
-          } else {
-            // For new sign ups, always go to UserTypeSelection
-            Alert.alert(
-              'Success',
-              'Phone number verified successfully!',
-              [
-                {
-                  text: 'OK',
-                  onPress: () => navigation.reset({
-                    index: 0,
-                    routes: [{ name: 'UserTypeSelection' }],
-                  })
-                }
-              ],
-              { cancelable: false }
-            );
-          }
+          await handleSuccessfulVerification();
         }
       } catch (error) {
         console.error('Error verifying OTP:', error);
@@ -129,6 +71,77 @@ const OTPVerificationScreen = () => {
           ]
         );
       }
+    }
+  };
+
+
+  const handleSuccessfulVerification = async () => {
+    try {
+      // Check user role in Firestore if not signing up
+      if (!isSignUp) {
+        const userDoc = await firestore()
+          .collection('users')
+          .doc(phoneNumber)
+          .get();
+
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          
+          // Show alert and navigate after user confirms
+          Alert.alert(
+            'Success',
+            'Phone number verified successfully!',
+            [
+              {
+                text: 'OK',
+                onPress: () => {
+                  // Navigate based on role after alert confirmation
+                  if (userData.role === 'responder') {
+                    navigation.reset({
+                      index: 0,
+                      routes: [{ name: 'ResponderHome' }],
+                    });
+                  } else if (userData.role === 'emergency') {
+                    navigation.reset({
+                      index: 0,
+                      routes: [{ name: 'Home' }],
+                    });
+                  } else {
+                    // If role is not set, send to UserTypeSelection
+                    navigation.reset({
+                      index: 0,
+                      routes: [{ name: 'UserTypeSelection' }],
+                    });
+                  }
+                }
+              }
+            ],
+            { cancelable: false }
+          );
+        }
+      } else {
+        // For new sign ups, always go to UserTypeSelection
+        Alert.alert(
+          'Success',
+          'Phone number verified successfully!',
+          [
+            {
+              text: 'OK',
+              onPress: () => navigation.reset({
+                index: 0,
+                routes: [{ name: 'UserTypeSelection' }],
+              })
+            }
+          ],
+          { cancelable: false }
+        );
+      }
+    } catch (error) {
+      console.error('Error in handleSuccessfulVerification:', error);
+      Alert.alert(
+        'Error',
+        'Something went wrong. Please try again.'
+      );
     }
   };
 

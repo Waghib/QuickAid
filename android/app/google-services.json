@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "1045206375708",
-    "project_id": "quickaid-6ae26",
-    "storage_bucket": "quickaid-6ae26.firebasestorage.app"
+    "project_number": "321344962699",
+    "project_id": "quick-aid-9149",
+    "storage_bucket": "quick-aid-9149.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1045206375708:android:153e577937a5d54b5e2ed9",
+        "mobilesdk_app_id": "1:321344962699:android:53252fb5c1c8a6a50f148e",
         "android_client_info": {
           "package_name": "com.quickaid"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyB3XpZywQQES0s6jhVsi7xJgx412paJD2A"
+          "current_key": "AIzaSyBCYrSxPZsTK3FCmJZgnpax8HlCgBCu4GM"
         }
       ],
       "services": {

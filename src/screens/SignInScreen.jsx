@@ -122,7 +122,7 @@ const SignInScreen = () => {
           });
 
         // Update PostgreSQL last login (fire and forget)
-        fetch('http://10.0.2.2:5000/api/users/login', {
+        fetch('http://192.168.100.173:5000/api/users/login', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
