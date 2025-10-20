@@ -400,10 +400,10 @@ const Home = () => {
       <View style={styles.bottomContainer}>
         <TouchableOpacity 
           style={[styles.helpButton, dynamicStyles.bottomButton]}
-          onPress={() => setIsUserModalVisible(true)}
+          onPress={() => navigation.navigate('EmergencyRequest')}
         >
           <Text style={[styles.helpButtonText, dynamicStyles.buttonText]}>
-            Request for help
+            🚨 Request Emergency Help
           </Text>
         </TouchableOpacity>
       </View>

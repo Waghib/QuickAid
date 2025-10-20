@@ -141,7 +141,7 @@
 77-->/Users/dev/Downloads/QuickAid/android/app/src/main/AndroidManifest.xml:32:7-34:66
 78            android:name="com.google.android.geo.API_KEY"
 78-->/Users/dev/Downloads/QuickAid/android/app/src/main/AndroidManifest.xml:33:9-54
-79            android:value="AIzaSyBCxSwphnnaPTyvr9_tHMHRKUpZwUO5TjA" />
+79            android:value="AIzaSyAulXLSMmXb5A89yHrNDRCK6UzAhjvUwBY" />
 79-->/Users/dev/Downloads/QuickAid/android/app/src/main/AndroidManifest.xml:34:9-64
 80        <meta-data
 80-->[:react-native-firebase_app] /Users/dev/Downloads/QuickAid/node_modules/@react-native-firebase/app/android/build/intermediates/merged_manifest/debug/AndroidManifest.xml:9:9-11:36

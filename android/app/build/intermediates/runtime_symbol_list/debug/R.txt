@@ -6336,9 +6336,10 @@ int styleable ViewStubCompat_android_layout 1
 int styleable ViewStubCompat_android_inflatedId 2
 int xml image_share_filepaths 0x7f120000
 int xml imagepicker_provider_paths 0x7f120001
-int xml rn_dev_preferences 0x7f120002
-int xml standalone_badge 0x7f120003
-int xml standalone_badge_gravity_bottom_end 0x7f120004
-int xml standalone_badge_gravity_bottom_start 0x7f120005
-int xml standalone_badge_gravity_top_start 0x7f120006
-int xml standalone_badge_offset 0x7f120007
+int xml network_security_config 0x7f120002
+int xml rn_dev_preferences 0x7f120003
+int xml standalone_badge 0x7f120004
+int xml standalone_badge_gravity_bottom_end 0x7f120005
+int xml standalone_badge_gravity_bottom_start 0x7f120006
+int xml standalone_badge_gravity_top_start 0x7f120007
+int xml standalone_badge_offset 0x7f120008

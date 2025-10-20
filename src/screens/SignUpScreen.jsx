@@ -7,9 +7,12 @@ import {
   StatusBar,
   useWindowDimensions,
   Alert,
+  PermissionsAndroid,
+  Platform,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import firestore from '@react-native-firebase/firestore';
+import Geolocation from '@react-native-community/geolocation';
 import { authStyles } from '../styles/authStyles';
 import { getDynamicStyles } from '../styles/dynamicStyles';
 import { AuthLogo, AuthInput, AuthButton } from '../components/authComponents';
@@ -115,6 +118,56 @@ const SignUpScreen = ({ route }) => {
     navigation.navigate('SignIn');
   };
 
+  // Request location permission for Android
+  const requestLocationPermission = async () => {
+    if (Platform.OS === 'android') {
+      try {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+          {
+            title: 'Location Permission',
+            message: 'QuickAid needs access to your location to provide emergency services.',
+            buttonNeutral: 'Ask Me Later',
+            buttonNegative: 'Cancel',
+            buttonPositive: 'OK',
+          }
+        );
+        return granted === PermissionsAndroid.RESULTS.GRANTED;
+      } catch (err) {
+        console.warn(err);
+        return false;
+      }
+    }
+    return true; // iOS handles permissions differently
+  };
+
+  // Get current location
+  const getCurrentLocation = () => {
+    return new Promise((resolve, reject) => {
+      Geolocation.getCurrentPosition(
+        (position) => {
+          resolve({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+        },
+        (error) => {
+          console.error('Location error:', error);
+          // Return default coordinates if location fails
+          resolve({
+            latitude: 0,
+            longitude: 0,
+          });
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 10000,
+        }
+      );
+    });
+  };
+
   const handleSignUp = async () => {
     const isNameValid = validateName(name);
     const isPhoneValid = validatePhone(phoneNumber);
@@ -135,7 +188,18 @@ const SignUpScreen = ({ route }) => {
           Alert.alert('Error', 'This phone number is already registered!');
           return;
         }
-  
+
+        // Request location permission and get current location
+        const hasLocationPermission = await requestLocationPermission();
+        let userLocation = { latitude: 0, longitude: 0 };
+        
+        if (hasLocationPermission) {
+          userLocation = await getCurrentLocation();
+          console.log('User location:', userLocation);
+        } else {
+          console.log('Location permission denied, using default coordinates');
+        }
+
         // Create user in Firebase
         await firestore()
           .collection('users')
@@ -143,6 +207,8 @@ const SignUpScreen = ({ route }) => {
           .set({
             name: name,
             phoneNumber: fullPhoneNumber,
+            latitude: userLocation.latitude,
+            longitude: userLocation.longitude,
             createdAt: firestore.FieldValue.serverTimestamp(),
             lastLogin: firestore.FieldValue.serverTimestamp()
           });
@@ -163,8 +229,8 @@ const SignUpScreen = ({ route }) => {
               id: fullPhoneNumber,
               name: name,
               contactInfo: fullPhoneNumber,
-              latitude: 0,
-              longitude: 0
+              latitude: userLocation.latitude,
+              longitude: userLocation.longitude
             })
           })
           .then(response => {

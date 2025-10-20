@@ -633,6 +633,379 @@ app.post('/api/users/:userId/simple-training-progress', async (req, res) => {
   }
 });
 
+// Emergency Request Routes
+
+// Create new emergency request
+app.post('/api/emergency-requests', async (req, res) => {
+  const transaction = await sequelize.transaction();
+  
+  try {
+    const { userId, latitude, longitude, emergencyType, description } = req.body;
+    
+    console.log('Creating emergency request:', { userId, latitude, longitude, emergencyType });
+    
+    // Generate unique request ID
+    const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Create emergency request
+    console.log('Creating emergency request with data:', {
+      requestId: requestId,
+      emergencyUserId: userId,
+      latitude: parseFloat(latitude),
+      longitude: parseFloat(longitude),
+      emergencyType: emergencyType || 'general',
+      status: 'pending',
+      time: new Date()
+    });
+    
+    const emergencyRequest = await EmergencyRequest.create({
+      requestId: requestId,
+      emergencyUserId: userId,
+      latitude: parseFloat(latitude),
+      longitude: parseFloat(longitude),
+      emergencyType: emergencyType || 'general',
+      status: 'pending',
+      time: new Date()
+    }, { transaction });
+    
+    console.log('Emergency request created successfully:', emergencyRequest.toJSON());
+    
+    // First, let's check what's in the FirstResponders table
+    const allResponders = await sequelize.query(`
+      SELECT * FROM "FirstResponders" LIMIT 5
+    `, {
+      type: sequelize.QueryTypes.SELECT
+    });
+    console.log('All FirstResponders:', allResponders);
+    
+    const allUsers = await sequelize.query(`
+      SELECT id, name, latitude, longitude FROM "Users" WHERE latitude IS NOT NULL AND longitude IS NOT NULL LIMIT 5
+    `, {
+      type: sequelize.QueryTypes.SELECT
+    });
+    console.log('Users with location:', allUsers);
+    
+    // Find closest available first responders (within 10km radius)
+    const responders = await sequelize.query(`
+      SELECT fr.*, u.name, u.latitude, u.longitude, u.id as user_id,
+             (6371 * acos(cos(radians(:lat)) * cos(radians(u.latitude)) * 
+             cos(radians(u.longitude) - radians(:lng)) + 
+             sin(radians(:lat)) * sin(radians(u.latitude)))) AS distance
+      FROM "FirstResponders" fr
+      JOIN "Users" u ON fr."userId" = u.id
+      WHERE fr.availability = true 
+      AND fr."certificationStatus" = 'approved'
+      AND u.latitude IS NOT NULL 
+      AND u.longitude IS NOT NULL
+      AND (6371 * acos(cos(radians(:lat)) * cos(radians(u.latitude)) * 
+           cos(radians(u.longitude) - radians(:lng)) + 
+           sin(radians(:lat)) * sin(radians(u.latitude)))) <= 10
+      ORDER BY distance ASC
+      LIMIT 5
+    `, {
+      replacements: { lat: latitude, lng: longitude },
+      type: sequelize.QueryTypes.SELECT
+    });
+    
+    console.log(`Found ${responders.length} available responders`);
+    console.log('Responders details:', responders);
+    
+    // If no responders are available, update request status
+    if (responders.length === 0) {
+      emergencyRequest.status = 'no_responders_available';
+      await emergencyRequest.save({ transaction });
+      
+      await transaction.commit();
+      
+      return res.status(200).json({
+        success: true,
+        data: {
+          requestId: emergencyRequest.requestId,
+          availableResponders: [],
+          message: 'No responders currently available in your area'
+        }
+      });
+    }
+    
+    await transaction.commit();
+    
+    res.status(201).json({
+      success: true,
+      data: {
+        requestId: emergencyRequest.requestId,
+        availableResponders: responders
+      }
+    });
+  } catch (error) {
+    await transaction.rollback();
+    console.error('Error creating emergency request:', error);
+    res.status(500).json({ success: false, message: 'Failed to create emergency request', error: error.message });
+  }
+});
+
+// Send request to specific first responder
+app.post('/api/emergency-requests/:requestId/send-to-responder', async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const { responderId } = req.body;
+    
+    console.log(`Sending request ${requestId} to responder ${responderId}`);
+    
+    // Update emergency request with selected responder
+    const emergencyRequest = await EmergencyRequest.findByPk(requestId);
+    if (!emergencyRequest) {
+      return res.status(404).json({ success: false, message: 'Emergency request not found' });
+    }
+    
+    emergencyRequest.firstResponderId = responderId;
+    emergencyRequest.status = 'sent_to_responder';
+    await emergencyRequest.save();
+    
+    // TODO: Send real-time notification to responder via Socket.IO
+    
+    res.status(200).json({
+      success: true,
+      message: 'Request sent to first responder',
+      data: { requestId, responderId }
+    });
+  } catch (error) {
+    console.error('Error sending request to responder:', error);
+    res.status(500).json({ success: false, message: 'Failed to send request to responder', error: error.message });
+  }
+});
+
+// Get emergency requests for a responder
+app.get('/api/first-responders/:responderId/requests', async (req, res) => {
+  try {
+    const { responderId } = req.params;
+    
+    // Use raw query to avoid association issues
+    const requests = await sequelize.query(`
+      SELECT 
+        er.*,
+        u.name as emergency_user_name,
+        u."contactInfo" as emergency_user_contact
+      FROM "EmergencyRequests" er
+      LEFT JOIN "Users" u ON er."emergencyUserId" = u.id
+      WHERE er."firstResponderId" = :responderId
+      AND er.status IN ('sent_to_responder', 'accepted')
+      ORDER BY er.time DESC
+    `, {
+      replacements: { responderId },
+      type: sequelize.QueryTypes.SELECT
+    });
+    
+    console.log('Raw query result:', requests);
+    
+    // Transform the results to match the expected format
+    const formattedRequests = requests.map(request => ({
+      ...request,
+      EmergencyUser: {
+        name: request.emergency_user_name,
+        contactInfo: request.emergency_user_contact
+      }
+    }));
+    
+    res.status(200).json({
+      success: true,
+      data: formattedRequests
+    });
+  } catch (error) {
+    console.error('Error fetching responder requests:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch requests', error: error.message });
+  }
+});
+
+// Responder accepts/rejects emergency request
+app.put('/api/emergency-requests/:requestId/respond', async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const { action, responderId } = req.body; // action: 'accept' or 'reject'
+    
+    console.log(`Responder ${responderId} ${action}ed request ${requestId}`);
+    
+    const emergencyRequest = await EmergencyRequest.findByPk(requestId);
+    if (!emergencyRequest) {
+      return res.status(404).json({ success: false, message: 'Emergency request not found' });
+    }
+    
+    if (action === 'accept') {
+      emergencyRequest.status = 'accepted';
+      emergencyRequest.responseTime = new Date();
+    } else if (action === 'reject') {
+      emergencyRequest.status = 'rejected';
+      emergencyRequest.firstResponderId = null; // Clear responder so request can be sent to another
+    }
+    
+    await emergencyRequest.save();
+    
+    // TODO: Send real-time update to emergency user via Socket.IO
+    
+    res.status(200).json({
+      success: true,
+      message: `Request ${action}ed successfully`,
+      data: { requestId, status: emergencyRequest.status }
+    });
+  } catch (error) {
+    console.error('Error responding to request:', error);
+    res.status(500).json({ success: false, message: 'Failed to respond to request', error: error.message });
+  }
+});
+
+// Get emergency request status
+app.get('/api/emergency-requests/:requestId', async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    
+    // Use raw query to avoid association issues
+    const results = await sequelize.query(`
+      SELECT 
+        er.*,
+        eu.name as emergency_user_name,
+        eu."contactInfo" as emergency_user_contact,
+        ru.name as responder_name,
+        ru."contactInfo" as responder_contact,
+        ru.latitude as responder_latitude,
+        ru.longitude as responder_longitude
+      FROM "EmergencyRequests" er
+      LEFT JOIN "Users" eu ON er."emergencyUserId" = eu.id
+      LEFT JOIN "Users" ru ON er."firstResponderId" = ru.id
+      WHERE er."requestId" = :requestId
+    `, {
+      replacements: { requestId },
+      type: sequelize.QueryTypes.SELECT
+    });
+    
+    if (results.length === 0) {
+      return res.status(404).json({ success: false, message: 'Emergency request not found' });
+    }
+    
+    const request = results[0];
+    
+    // Transform the result to match the expected format
+    const formattedRequest = {
+      ...request,
+      EmergencyUser: {
+        name: request.emergency_user_name,
+        contactInfo: request.emergency_user_contact
+      },
+      FirstResponder: request.responder_name ? {
+        User: {
+          name: request.responder_name,
+          contactInfo: request.responder_contact,
+          latitude: request.responder_latitude,
+          longitude: request.responder_longitude
+        }
+      } : null
+    };
+    
+    res.status(200).json({
+      success: true,
+      data: formattedRequest
+    });
+  } catch (error) {
+    console.error('Error fetching emergency request:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch emergency request', error: error.message });
+  }
+});
+
+// Test endpoint to check responder requests
+app.get('/api/test-responder-requests/:phone', async (req, res) => {
+  try {
+    const { phone } = req.params;
+    
+    const requests = await sequelize.query(`
+      SELECT 
+        er.*,
+        u.name as emergency_user_name,
+        u."contactInfo" as emergency_user_contact
+      FROM "EmergencyRequests" er
+      LEFT JOIN "Users" u ON er."emergencyUserId" = u.id
+      WHERE er."firstResponderId" = :phone
+      AND er.status IN ('sent_to_responder', 'accepted')
+      ORDER BY er.time DESC
+    `, {
+      replacements: { phone },
+      type: sequelize.QueryTypes.SELECT
+    });
+    
+    console.log(`Found ${requests.length} requests for responder ${phone}`);
+    
+    const formattedRequests = requests.map(request => ({
+      ...request,
+      EmergencyUser: {
+        name: request.emergency_user_name,
+        contactInfo: request.emergency_user_contact
+      }
+    }));
+    
+    res.status(200).json({
+      success: true,
+      count: requests.length,
+      data: formattedRequests
+    });
+  } catch (error) {
+    console.error('Error fetching test responder requests:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch requests', error: error.message });
+  }
+});
+
+// Debug endpoint to check emergency requests
+app.get('/api/debug-emergency-requests', async (req, res) => {
+  try {
+    const requests = await sequelize.query(`
+      SELECT * FROM "EmergencyRequests" ORDER BY "createdAt" DESC LIMIT 10
+    `, {
+      type: sequelize.QueryTypes.SELECT
+    });
+    
+    res.status(200).json({
+      success: true,
+      count: requests.length,
+      data: requests
+    });
+  } catch (error) {
+    console.error('Error fetching emergency requests:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch emergency requests', error: error.message });
+  }
+});
+
+// Create test first responder (for testing purposes)
+app.post('/api/create-test-responder', async (req, res) => {
+  try {
+    const { userId, name, phone, latitude, longitude } = req.body;
+    
+    // Create or update user
+    await User.upsert({
+      id: phone,
+      name: name,
+      contactInfo: phone,
+      latitude: parseFloat(latitude),
+      longitude: parseFloat(longitude),
+      userType: 'first_responder'
+    });
+    
+    // Create first responder record
+    const responderId = `resp_${Date.now()}`;
+    await FirstResponder.upsert({
+      firstResponderId: responderId,
+      userId: phone,
+      availability: true,
+      certificationStatus: 'approved',
+      isOnDuty: true
+    });
+    
+    res.status(201).json({
+      success: true,
+      message: 'Test responder created successfully',
+      data: { responderId, userId: phone }
+    });
+  } catch (error) {
+    console.error('Error creating test responder:', error);
+    res.status(500).json({ success: false, message: 'Failed to create test responder', error: error.message });
+  }
+});
+
 // Run SQL query to set metadata to JSONB type
 app.get('/api/update-metadata-column', async (req, res) => {
   try {
