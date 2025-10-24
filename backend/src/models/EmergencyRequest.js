@@ -7,6 +7,14 @@ const EmergencyRequest = sequelize.define('EmergencyRequest', {
     primaryKey: true,
     allowNull: false
   },
+  emergencyUserId: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  firstResponderId: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
   emergencyType: {
     type: DataTypes.STRING,
     allowNull: false
@@ -23,8 +31,12 @@ const EmergencyRequest = sequelize.define('EmergencyRequest', {
     type: DataTypes.DATE,
     allowNull: false
   },
+  responseTime: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
   status: {
-    type: DataTypes.ENUM('pending', 'accepted', 'completed', 'cancelled'),
+    type: DataTypes.ENUM('pending', 'sent_to_responder', 'accepted', 'rejected', 'completed', 'cancelled', 'no_responders_available'),
     defaultValue: 'pending'
   }
 }, {

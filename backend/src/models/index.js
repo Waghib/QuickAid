@@ -9,6 +9,27 @@ const TrainingProgress = require('./TrainingProgress');
 const TrainingVideo = require('./TrainingVideo');
 
 // Define relationships
+// EmergencyRequest associations
+EmergencyRequest.belongsTo(User, { 
+  foreignKey: 'emergencyUserId', 
+  as: 'EmergencyUser' 
+});
+EmergencyRequest.belongsTo(User, { 
+  foreignKey: 'firstResponderId', 
+  as: 'FirstResponder' 
+});
+
+// User associations
+User.hasMany(EmergencyRequest, { 
+  foreignKey: 'emergencyUserId', 
+  as: 'EmergencyRequests' 
+});
+User.hasMany(EmergencyRequest, { 
+  foreignKey: 'firstResponderId', 
+  as: 'ResponderRequests' 
+});
+
+// Keep the old associations for backward compatibility
 EmergencyRequest.belongsTo(EmergencyUser, { foreignKey: 'emergencyUserId' });
 EmergencyRequest.belongsTo(FirstResponder, { foreignKey: 'firstResponderId' });
 

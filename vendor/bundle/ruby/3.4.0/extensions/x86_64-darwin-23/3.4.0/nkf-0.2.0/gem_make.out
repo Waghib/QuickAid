@@ -1,0 +1,18 @@
+current directory: /Users/dev/Downloads/QuickAid/vendor/bundle/ruby/3.4.0/gems/nkf-0.2.0/ext/nkf
+/usr/local/opt/ruby/bin/ruby extconf.rb
+creating Makefile
+
+current directory: /Users/dev/Downloads/QuickAid/vendor/bundle/ruby/3.4.0/gems/nkf-0.2.0/ext/nkf
+make DESTDIR\= sitearchdir\=./.gem.20251018-22123-lt8waj sitelibdir\=./.gem.20251018-22123-lt8waj clean
+
+current directory: /Users/dev/Downloads/QuickAid/vendor/bundle/ruby/3.4.0/gems/nkf-0.2.0/ext/nkf
+make DESTDIR\= sitearchdir\=./.gem.20251018-22123-lt8waj sitelibdir\=./.gem.20251018-22123-lt8waj
+compiling nkf.c
+linking shared-object nkf.bundle
+
+current directory: /Users/dev/Downloads/QuickAid/vendor/bundle/ruby/3.4.0/gems/nkf-0.2.0/ext/nkf
+make DESTDIR\= sitearchdir\=./.gem.20251018-22123-lt8waj sitelibdir\=./.gem.20251018-22123-lt8waj install
+/usr/bin/install -c -m 0755 nkf.bundle ./.gem.20251018-22123-lt8waj
+
+current directory: /Users/dev/Downloads/QuickAid/vendor/bundle/ruby/3.4.0/gems/nkf-0.2.0/ext/nkf
+make DESTDIR\= sitearchdir\=./.gem.20251018-22123-lt8waj sitelibdir\=./.gem.20251018-22123-lt8waj clean

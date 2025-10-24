@@ -8,6 +8,14 @@ const FirstResponder = sequelize.define('FirstResponder', {
     primaryKey: true,
     allowNull: false
   },
+  userId: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    references: {
+      model: 'Users',
+      key: 'id'
+    }
+  },
   trainingCompletionDate: {
     type: DataTypes.DATE,
     allowNull: true
