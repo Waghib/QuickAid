@@ -410,7 +410,7 @@ const ResponderHome = () => {
       <View style={styles.bottomContainer}>
         <TouchableOpacity 
           style={[styles.statusButton, dynamicStyles.bottomButton]}
-          onPress={() => navigation.navigate('ResponderRequest')}
+          onPress={() => navigation.navigate('FirstResponderDashboard')}
         >
           <Text style={[styles.statusButtonText, dynamicStyles.buttonText]}>
             📋 View Emergency Requests

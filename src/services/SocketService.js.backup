@@ -1,0 +1,39 @@
+// Temporary simple socket service that doesn't actually connect
+class SocketService {
+  constructor() {
+    this.isConnected = false;
+    this.listeners = new Map();
+  }
+
+  connect() {
+    console.log('Socket connection disabled for testing - using polling only');
+    this.isConnected = false;
+  }
+
+  disconnect() {
+    console.log('Socket disconnect (no-op)');
+  }
+
+  cleanup() {
+    console.log('Socket cleanup (no-op)');
+  }
+
+  addEventListener(event, callback) {
+    console.log('Socket addEventListener (no-op):', event);
+  }
+
+  removeEventListener(event, callback) {
+    console.log('Socket removeEventListener (no-op):', event);
+  }
+
+  isSocketConnected() {
+    return false;
+  }
+
+  emit(event, data) {
+    console.log('Socket emit (no-op):', event, data);
+  }
+}
+
+const socketService = new SocketService();
+export default socketService;

@@ -19,6 +19,7 @@ import Certification from './src/screens/Certification';
 import EmergencyRequestScreen from './src/screens/EmergencyRequestScreen';
 import RequestStatusScreen from './src/screens/RequestStatusScreen';
 import ResponderRequestScreen from './src/screens/ResponderRequestScreen';
+import FirstResponderDashboard from './src/screens/FirstResponderDashboard';
 
 // Define the type for the navigation stack
 type RootStackParamList = {
@@ -37,6 +38,7 @@ type RootStackParamList = {
   EmergencyRequest: undefined;
   RequestStatus: { requestId: string; responder: any };
   ResponderRequest: undefined;
+  FirstResponderDashboard: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -124,6 +126,7 @@ const App: React.FC = () => {
             <Stack.Screen name="EmergencyRequest" component={EmergencyRequestScreen} />
             <Stack.Screen name="RequestStatus" component={RequestStatusScreen} />
             <Stack.Screen name="ResponderRequest" component={ResponderRequestScreen} />
+            <Stack.Screen name="FirstResponderDashboard" component={FirstResponderDashboard} />
           </>
         )}
       </Stack.Navigator>

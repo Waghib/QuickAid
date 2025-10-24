@@ -15,6 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import auth from '@react-native-firebase/auth';
 import Geolocation from '@react-native-community/geolocation';
 import { API_BASE_URL } from '../config/api';
+import socketService from '../services/SocketService';
 
 const EmergencyRequestScreen = () => {
   const navigation = useNavigation();
@@ -38,7 +39,51 @@ const EmergencyRequestScreen = () => {
 
   useEffect(() => {
     getCurrentLocation();
-  }, []);
+    
+    // Connect to Socket.IO for real-time status updates (optional)
+    try {
+      socketService.connect();
+    } catch (error) {
+      console.log('Socket connection failed, continuing without real-time features');
+    }
+    
+    // Listen for request status updates
+    const handleStatusUpdate = (updateData) => {
+      if (updateData.requestId === requestId) {
+        if (updateData.action === 'accept') {
+          Alert.alert(
+            '✅ Request Accepted!',
+            'A first responder has accepted your emergency request and is on their way to help you.',
+            [
+              {
+                text: 'Track Responder',
+                onPress: () => navigation.navigate('RequestStatus', { 
+                  requestId: updateData.requestId,
+                  responderId: updateData.responderId 
+                })
+              },
+              {
+                text: 'OK',
+                style: 'cancel'
+              }
+            ]
+          );
+        } else if (updateData.action === 'reject') {
+          Alert.alert(
+            'Request Update',
+            'The responder was unable to accept your request. We are finding another responder for you.',
+            [{ text: 'OK' }]
+          );
+        }
+      }
+    };
+
+    socketService.addEventListener('request_status_update', handleStatusUpdate);
+    
+    return () => {
+      socketService.removeEventListener('request_status_update', handleStatusUpdate);
+    };
+  }, [requestId]);
 
   useEffect(() => {
     console.log('Modal state changed:', showResponderModal);
@@ -79,20 +124,12 @@ const EmergencyRequestScreen = () => {
     }
 
     setLoading(true);
+    
+    const currentUser = auth().currentUser;
+    const userId = currentUser.phoneNumber || currentUser.uid;
+
+    // Create emergency request and fetch responders
     try {
-      const currentUser = auth().currentUser;
-      const userId = currentUser.phoneNumber || currentUser.uid;
-
-      console.log('Making emergency request with:', {
-        userId,
-        latitude: currentLocation.latitude,
-        longitude: currentLocation.longitude,
-        emergencyType,
-      });
-
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-
       const response = await fetch(`${API_BASE_URL}/api/emergency-requests`, {
         method: 'POST',
         headers: {
@@ -104,64 +141,71 @@ const EmergencyRequestScreen = () => {
           longitude: currentLocation.longitude,
           emergencyType,
         }),
-        signal: controller.signal,
       });
 
-      clearTimeout(timeoutId);
-
-      console.log('Response status:', response.status);
-      console.log('Response ok:', response.ok);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
       const data = await response.json();
-      console.log('Emergency request response:', data);
-
+      
       if (data.success) {
-        console.log('Setting request ID:', data.data.requestId);
-        console.log('Available responders:', data.data.availableResponders);
-        
         setRequestId(data.data.requestId);
-        setAvailableResponders(data.data.availableResponders);
+        setLoading(false);
         
-        if (data.data.availableResponders.length > 0) {
-          console.log('Showing responder modal');
-          setShowResponderModal(true);
-        } else {
-          Alert.alert(
-            'No Responders Available',
-            data.data.message || 'No first responders are currently available in your area. Emergency services have been notified.',
-            [
-              { 
-                text: 'Call Emergency Services', 
-                onPress: () => {
-                  Linking.openURL('tel:15');
-                  navigation.goBack();
-                }
-              },
-              { 
-                text: 'OK', 
-                onPress: () => navigation.goBack() 
-              }
-            ]
-          );
-        }
+        // Now fetch available responders
+        fetchAndShowResponders();
       } else {
-        Alert.alert('Error', data.message || 'Failed to create emergency request');
+        setLoading(false);
+        Alert.alert('Error', 'Failed to create emergency request');
       }
     } catch (error) {
-      console.error('Error creating emergency request:', error);
-      Alert.alert('Error', 'Failed to create emergency request. Please try again.');
-    } finally {
-      console.log('Setting loading to false');
       setLoading(false);
+      Alert.alert('Error', `Request failed: ${error.message}`);
     }
+  };
+
+  const fetchAndShowResponders = () => {
+    // Fetch responders from real API
+    fetch(`${API_BASE_URL}/api/emergency-requests/find-responders`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        latitude: currentLocation.latitude,
+        longitude: currentLocation.longitude,
+      }),
+    })
+    .then(response => response.json())
+    .then(responderData => {
+      if (responderData.success && responderData.data.length > 0) {
+        setAvailableResponders(responderData.data);
+        setShowResponderModal(true);
+      } else {
+        Alert.alert(
+          'No Responders Available',
+          'No first responders are currently available in your area. Emergency services have been notified.',
+          [
+            { 
+              text: 'Call Emergency Services', 
+              onPress: () => {
+                Linking.openURL('tel:15');
+                navigation.goBack();
+              }
+            },
+            { 
+              text: 'OK', 
+              onPress: () => navigation.goBack() 
+            }
+          ]
+        );
+      }
+    })
+    .catch(error => {
+      Alert.alert('Error', `Failed to find responders: ${error.message}`);
+    });
   };
 
   const sendRequestToResponder = async (responder) => {
     setSendingToResponder(responder.userId);
+    
     try {
       const response = await fetch(`${API_BASE_URL}/api/emergency-requests/${requestId}/send-to-responder`, {
         method: 'POST',
@@ -179,19 +223,12 @@ const EmergencyRequestScreen = () => {
         setSelectedResponder(responder);
         setShowResponderModal(false);
         Alert.alert(
-          'Request Sent Successfully!',
-          `Your emergency request has been sent to ${responder.name}. You can track the status and they will respond shortly.`,
+          '✅ Request Sent Successfully!',
+          `Your emergency request has been assigned to ${responder.name}. They will receive the request and respond shortly.`,
           [
             {
-              text: 'Track Status',
-              onPress: () => navigation.navigate('RequestStatus', { 
-                requestId,
-                responder 
-              })
-            },
-            {
-              text: 'Stay Here',
-              style: 'cancel'
+              text: 'OK',
+              onPress: () => navigation.goBack()
             }
           ]
         );
@@ -199,7 +236,6 @@ const EmergencyRequestScreen = () => {
         Alert.alert('Error', data.message || 'Failed to send request to responder');
       }
     } catch (error) {
-      console.error('Error sending request to responder:', error);
       Alert.alert('Error', 'Failed to send request. Please try again.');
     } finally {
       setSendingToResponder(null);
@@ -213,59 +249,58 @@ const EmergencyRequestScreen = () => {
     return `${distance.toFixed(1)}km away`;
   };
 
-  const ResponderModal = () => (
-    <Modal
-      visible={showResponderModal}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={() => setShowResponderModal(false)}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Available First Responders</Text>
-          <Text style={styles.modalSubtitle}>Select a responder to send your emergency request</Text>
-          
-          <ScrollView style={styles.responderList}>
-            {availableResponders.map((responder, index) => (
-              <TouchableOpacity
-                key={index}
-                style={[
-                  styles.responderCard,
-                  sendingToResponder === responder.userId && styles.responderCardSending
-                ]}
-                onPress={() => sendRequestToResponder(responder)}
-                disabled={sendingToResponder !== null}
-              >
-                <View style={styles.responderInfo}>
-                  <Text style={styles.responderName}>{responder.name}</Text>
-                  <Text style={styles.responderDistance}>
-                    {formatDistance(responder.distance)}
-                  </Text>
-                  <Text style={styles.responderStatus}>
-                    ✅ Available • Certified
-                  </Text>
-                </View>
-                <View style={styles.selectButton}>
-                  {sendingToResponder === responder.userId ? (
-                    <ActivityIndicator color="white" size="small" />
-                  ) : (
-                    <Text style={styles.selectButtonText}>Select</Text>
-                  )}
-                </View>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-          
-          <TouchableOpacity
-            style={styles.cancelButton}
-            onPress={() => setShowResponderModal(false)}
-          >
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
+  const ResponderModal = () => {
+    const responder = availableResponders[0]; // Show first available responder
+    
+    if (!responder) return null;
+    
+    return (
+      <Modal
+        visible={showResponderModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowResponderModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>🚨 Emergency Request Created</Text>
+            <Text style={styles.modalSubtitle}>Nearest available first responder found</Text>
+            
+            <View style={styles.responderCard}>
+              <View style={styles.responderInfo}>
+                <Text style={styles.responderName}>{responder.name}</Text>
+                <Text style={styles.responderDistance}>
+                  📍 {formatDistance(responder.distance)}
+                </Text>
+                <Text style={styles.responderStatus}>
+                  ✅ Available • Certified First Responder
+                </Text>
+              </View>
+            </View>
+            
+            <TouchableOpacity
+              style={[styles.selectButton, styles.primaryButton]}
+              onPress={() => sendRequestToResponder(responder)}
+              disabled={sendingToResponder !== null}
+            >
+              {sendingToResponder === responder.userId ? (
+                <ActivityIndicator color="white" size="small" />
+              ) : (
+                <Text style={styles.selectButtonText}>✅ Send Request to {responder.name}</Text>
+              )}
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => setShowResponderModal(false)}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-    </Modal>
-  );
+      </Modal>
+    );
+  };
 
   return (
     <ScrollView style={styles.container}>
@@ -330,19 +365,6 @@ const EmergencyRequestScreen = () => {
         )}
       </TouchableOpacity>
 
-      {/* Debug button - remove after testing */}
-      <TouchableOpacity
-        style={[styles.emergencyButton, { backgroundColor: '#FF8800', marginTop: 10 }]}
-        onPress={() => {
-          console.log('Debug: Setting test responders and showing modal');
-          setAvailableResponders([
-            { name: 'Test Responder', userId: 'test123', distance: 0.5 }
-          ]);
-          setShowResponderModal(true);
-        }}
-      >
-        <Text style={styles.emergencyButtonText}>🧪 TEST MODAL</Text>
-      </TouchableOpacity>
 
       <ResponderModal />
     </ScrollView>
@@ -514,6 +536,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingVertical: 8,
     borderRadius: 5,
+  },
+  primaryButton: {
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderRadius: 10,
+    marginTop: 20,
+    marginBottom: 10,
+    alignItems: 'center',
+    width: '100%',
   },
   selectButtonText: {
     color: 'white',

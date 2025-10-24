@@ -1,8 +1,39 @@
 const express = require('express');
 const cors = require('cors');
+const http = require('http');
+const socketIo = require('socket.io');
 require('dotenv').config();
 
 const app = express();
+const server = http.createServer(app);
+const io = socketIo(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
+});
+
+// Store connected users
+const connectedUsers = new Map();
+
+// Socket.IO connection handling
+io.on('connection', (socket) => {
+  console.log('User connected:', socket.id);
+
+  // User joins with their ID
+  socket.on('join', (userId) => {
+    connectedUsers.set(userId, socket.id);
+    socket.userId = userId;
+    console.log(`User ${userId} joined with socket ${socket.id}`);
+  });
+
+  socket.on('disconnect', () => {
+    if (socket.userId) {
+      connectedUsers.delete(socket.userId);
+      console.log(`User ${socket.userId} disconnected`);
+    }
+  });
+});
 
 // Middleware
 app.use(cors());
@@ -44,9 +75,20 @@ sequelize.authenticate()
         console.error('Error details:', err.parent || err);
     });
 
-// Routes
+// Basic route for testing
 app.get('/', (req, res) => {
-    res.json({ message: 'Welcome to QuickAid API' });
+    res.json({ message: 'Welcome to QuickAid API!' });
+});
+
+// Simple test endpoint for React Native connectivity
+app.post('/api/test', (req, res) => {
+    console.log('Test endpoint hit from React Native');
+    console.log('Request body:', req.body);
+    res.json({ 
+        success: true, 
+        message: 'React Native connection working!',
+        receivedData: req.body
+    });
 });
 
 // Admin routes
@@ -517,8 +559,9 @@ app.put('/api/users/:userId/type', async (req, res) => {
         where: { userId },
         defaults: {
           firstResponderId: userId,
-          certificationStatus: 'pending',
-          availability: false
+          certificationStatus: 'approved',
+          availability: true,
+          isOnDuty: true
         }
       });
     }
@@ -743,6 +786,48 @@ app.post('/api/emergency-requests', async (req, res) => {
   }
 });
 
+// Find available responders for a location (separate endpoint)
+app.post('/api/emergency-requests/find-responders', async (req, res) => {
+  try {
+    const { latitude, longitude } = req.body;
+    
+    console.log('Finding responders for location:', { latitude, longitude });
+    
+    // Find closest available first responders (within 10km radius)
+    const responders = await sequelize.query(`
+      SELECT fr.*, u.name, u.latitude, u.longitude, u.id as user_id,
+             (6371 * acos(cos(radians(:lat)) * cos(radians(u.latitude)) * 
+             cos(radians(u.longitude) - radians(:lng)) + 
+             sin(radians(:lat)) * sin(radians(u.latitude)))) AS distance
+      FROM "FirstResponders" fr
+      JOIN "Users" u ON fr."userId" = u.id
+      WHERE fr.availability = true 
+      AND fr."certificationStatus" = 'approved'
+      AND u.latitude IS NOT NULL 
+      AND u.longitude IS NOT NULL
+      AND (6371 * acos(cos(radians(:lat)) * cos(radians(u.latitude)) * 
+           cos(radians(u.longitude) - radians(:lng)) + 
+           sin(radians(:lat)) * sin(radians(u.latitude)))) <= 10
+      ORDER BY distance ASC
+      LIMIT 5
+    `, {
+      replacements: { lat: latitude, lng: longitude },
+      type: sequelize.QueryTypes.SELECT
+    });
+    
+    console.log(`Found ${responders.length} available responders for location`);
+    console.log('Responders found:', responders.map(r => ({ name: r.name, userId: r.user_id, distance: r.distance })));
+    
+    res.status(200).json({
+      success: true,
+      data: responders
+    });
+  } catch (error) {
+    console.error('Error finding responders:', error);
+    res.status(500).json({ success: false, message: 'Failed to find responders', error: error.message });
+  }
+});
+
 // Send request to specific first responder
 app.post('/api/emergency-requests/:requestId/send-to-responder', async (req, res) => {
   try {
@@ -761,7 +846,21 @@ app.post('/api/emergency-requests/:requestId/send-to-responder', async (req, res
     emergencyRequest.status = 'sent_to_responder';
     await emergencyRequest.save();
     
-    // TODO: Send real-time notification to responder via Socket.IO
+    // Send real-time notification to responder via Socket.IO
+    const responderSocketId = connectedUsers.get(responderId);
+    if (responderSocketId) {
+      io.to(responderSocketId).emit('new_emergency_request', {
+        requestId: emergencyRequest.requestId,
+        emergencyType: emergencyRequest.emergencyType,
+        latitude: emergencyRequest.latitude,
+        longitude: emergencyRequest.longitude,
+        time: emergencyRequest.time,
+        emergencyUserId: emergencyRequest.emergencyUserId
+      });
+      console.log(`Sent real-time notification to responder ${responderId}`);
+    } else {
+      console.log(`Responder ${responderId} is not connected`);
+    }
     
     res.status(200).json({
       success: true,
@@ -779,7 +878,24 @@ app.get('/api/first-responders/:responderId/requests', async (req, res) => {
   try {
     const { responderId } = req.params;
     
-    // Use raw query to avoid association issues
+    // Get responder's location first
+    const responder = await sequelize.query(`
+      SELECT u.latitude, u.longitude 
+      FROM "Users" u 
+      JOIN "FirstResponders" fr ON u.id = fr."userId"
+      WHERE fr."userId" = :responderId
+    `, {
+      replacements: { responderId },
+      type: sequelize.QueryTypes.SELECT
+    });
+
+    if (responder.length === 0) {
+      return res.status(404).json({ success: false, message: 'Responder not found' });
+    }
+
+    const { latitude: responderLat, longitude: responderLng } = responder[0];
+    
+    // Get only requests assigned to this responder
     const requests = await sequelize.query(`
       SELECT 
         er.*,
@@ -787,7 +903,7 @@ app.get('/api/first-responders/:responderId/requests', async (req, res) => {
         u."contactInfo" as emergency_user_contact
       FROM "EmergencyRequests" er
       LEFT JOIN "Users" u ON er."emergencyUserId" = u.id
-      WHERE er."firstResponderId" = :responderId
+      WHERE er."firstResponderId" = :responderId 
       AND er.status IN ('sent_to_responder', 'accepted')
       ORDER BY er.time DESC
     `, {
@@ -795,7 +911,9 @@ app.get('/api/first-responders/:responderId/requests', async (req, res) => {
       type: sequelize.QueryTypes.SELECT
     });
     
+    console.log('Responder location:', { responderLat, responderLng });
     console.log('Raw query result:', requests);
+    console.log('Number of requests found:', requests.length);
     
     // Transform the results to match the expected format
     const formattedRequests = requests.map(request => ({
@@ -839,7 +957,19 @@ app.put('/api/emergency-requests/:requestId/respond', async (req, res) => {
     
     await emergencyRequest.save();
     
-    // TODO: Send real-time update to emergency user via Socket.IO
+    // Send real-time update to emergency user via Socket.IO
+    const emergencyUserSocketId = connectedUsers.get(emergencyRequest.emergencyUserId);
+    if (emergencyUserSocketId) {
+      io.to(emergencyUserSocketId).emit('request_status_update', {
+        requestId: emergencyRequest.requestId,
+        status: emergencyRequest.status,
+        action: action,
+        responderId: responderId
+      });
+      console.log(`Sent status update to emergency user ${emergencyRequest.emergencyUserId}`);
+    } else {
+      console.log(`Emergency user ${emergencyRequest.emergencyUserId} is not connected`);
+    }
     
     res.status(200).json({
       success: true,
@@ -965,7 +1095,7 @@ app.get('/api/debug-emergency-requests', async (req, res) => {
       data: requests
     });
   } catch (error) {
-    console.error('Error fetching emergency requests:', error);
+    console.error('Error fetching debug emergency requests:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch emergency requests', error: error.message });
   }
 });
@@ -1006,6 +1136,33 @@ app.post('/api/create-test-responder', async (req, res) => {
   }
 });
 
+// Fix existing first responders (set them to available and on duty)
+app.post('/api/fix-responders', async (req, res) => {
+  try {
+    const result = await FirstResponder.update(
+      {
+        availability: true,
+        isOnDuty: true,
+        certificationStatus: 'approved'
+      },
+      {
+        where: {
+          availability: false
+        }
+      }
+    );
+    
+    res.status(200).json({
+      success: true,
+      message: `Fixed ${result[0]} first responders`,
+      data: { updatedCount: result[0] }
+    });
+  } catch (error) {
+    console.error('Error fixing responders:', error);
+    res.status(500).json({ success: false, message: 'Failed to fix responders', error: error.message });
+  }
+});
+
 // Run SQL query to set metadata to JSONB type
 app.get('/api/update-metadata-column', async (req, res) => {
   try {
@@ -1026,11 +1183,48 @@ app.use((err, req, res, next) => {
     res.status(500).json({ message: 'Something went wrong!' });
 });
 
+// Update user locations on startup
+async function updateUserLocations() {
+  try {
+    // Update tanees (+923181111111) to Dr. Fatima's current location
+    await sequelize.query(`
+      UPDATE "Users" 
+      SET latitude = 37.422, longitude = -122.083 
+      WHERE id = '+923181111111'
+    `);
+    
+    // Move Dr. Fatima 5km away (approximately 0.045 degrees)
+    await sequelize.query(`
+      UPDATE "Users" 
+      SET latitude = 37.467, longitude = -122.083 
+      WHERE id = '+923009876543'
+    `);
+    
+    // Also make sure tanees is an available first responder
+    await sequelize.query(`
+      UPDATE "FirstResponders" 
+      SET availability = true, "certificationStatus" = 'approved', "isOnDuty" = true
+      WHERE "userId" = '+923181111111'
+    `);
+    
+    console.log('Updated user locations:');
+    console.log('- Tanees (+923181111111): 37.422, -122.083 (close to emergency)');
+    console.log('- Dr. Fatima (+923009876543): 37.467, -122.083 (5km away)');
+  } catch (error) {
+    console.error('Error updating locations:', error);
+  }
+}
+
 // Start server
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+const PORT = process.env.PORT || 3001;
+server.listen(PORT, '0.0.0.0', () => {
     console.log(`Server is running on port ${PORT}`);
+    console.log(`Socket.IO server is ready for real-time connections`);
     console.log(`Server accessible at:`);
     console.log(`- Local: http://localhost:${PORT}`);
+    console.log(`- Network: http://192.168.100.218:${PORT}`);
     console.log(`- Android Emulator: http://10.0.2.2:${PORT}`);
+    
+    // Update locations after server starts
+    setTimeout(updateUserLocations, 2000);
 });
