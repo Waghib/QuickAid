@@ -12,8 +12,8 @@
     <string msgid="4692188335987374352" name="abc_action_mode_done">"Готово"</string>
     <string msgid="1189761859438369441" name="abc_activity_chooser_view_see_all">"Показати всі"</string>
     <string msgid="2165779757652331008" name="abc_activitychooserview_choose_application">"Вибрати програму"</string>
-    <string msgid="4215997306490295099" name="abc_capital_off">"ЗНИЖКА"</string>
-    <string msgid="884982626291842264" name="abc_capital_on">"УВІМК."</string>
+    <string msgid="4215997306490295099" name="abc_capital_off">"ВИМКНЕНО"</string>
+    <string msgid="884982626291842264" name="abc_capital_on">"УВІМКНЕНО"</string>
     <string msgid="8833365367933412986" name="abc_menu_alt_shortcut_label">"Alt+"</string>
     <string msgid="2223301931652355242" name="abc_menu_ctrl_shortcut_label">"Ctrl+"</string>
     <string msgid="838001238306846836" name="abc_menu_delete_shortcut_label">"delete"</string>
@@ -35,6 +35,13 @@
     <string msgid="1656852541809559762" name="abc_toolbar_collapse_description">"Згорнути"</string>
     <string gender="unknown" name="alert_description">Сповіщення</string>
     <string name="bottomsheet_action_expand_halfway">Розгорнути нижню половину</string>
+    <string msgid="881409763997275156" name="call_notification_answer_action">"Відповісти"</string>
+    <string msgid="8793775615905189152" name="call_notification_answer_video_action">"Відео"</string>
+    <string msgid="3229508546291798546" name="call_notification_decline_action">"Відхилити"</string>
+    <string msgid="2659457946726154263" name="call_notification_hang_up_action">"Завершити"</string>
+    <string msgid="6107532579223922871" name="call_notification_incoming_text">"Вхідний виклик"</string>
+    <string msgid="8623827134497363134" name="call_notification_ongoing_text">"Активний виклик"</string>
+    <string msgid="59049573811482460" name="call_notification_screening_text">"Вхідний виклик (Фільтр)"</string>
     <string name="character_counter_content_description">Введено символів: %1$d з %2$d</string>
     <string name="character_counter_overflowed_content_description">Перевищено ліміт символів: %1$d з %2$d</string>
     <string name="clear_text_end_icon_content_description">Видалити текст</string>
